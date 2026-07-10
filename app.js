@@ -83,6 +83,8 @@ function enhanceSelect(select){
   trigger.appendChild(valueSpan);
 
   const searchInput=searchBox.querySelector("input");
+  let smartPage=1;
+  const SMART_PAGE_SIZE=6;
 
   function syncLabel(){
     const option=select.options[select.selectedIndex];
@@ -98,19 +100,31 @@ function enhanceSelect(select){
       return !q || o.textContent.toLowerCase().includes(q);
     });
 
-    const visible=matched.slice(0,6);
+    const totalPages=Math.max(1,Math.ceil(matched.length/SMART_PAGE_SIZE));
+    if(smartPage>totalPages) smartPage=totalPages;
+    if(smartPage<1) smartPage=1;
 
-    optionsBox.innerHTML=visible.length
+    const start=(smartPage-1)*SMART_PAGE_SIZE;
+    const visible=matched.slice(start,start+SMART_PAGE_SIZE);
+
+    const optionHtml=visible.length
       ? visible.map(o=>`
           <button type="button"
                   class="smart-select-option ${o.value===select.value?"selected":""}"
                   data-value="${esc(o.value)}">
             <span>${esc(o.textContent)}</span>
           </button>`).join("")
-          + (matched.length>6
-              ? `<div class="smart-select-hint">اكتب في البحث للوصول إلى ${matched.length-6} عنصر إضافي</div>`
-              : "")
       : `<div class="smart-select-empty">لا توجد نتائج مطابقة.</div>`;
+
+    const pagerHtml=matched.length>SMART_PAGE_SIZE
+      ? `<div class="smart-select-pager">
+           <button type="button" class="smart-select-page-btn" data-page="${smartPage-1}" ${smartPage===1?"disabled":""}>‹</button>
+           <span class="smart-select-page-info">${smartPage} / ${totalPages}</span>
+           <button type="button" class="smart-select-page-btn" data-page="${smartPage+1}" ${smartPage===totalPages?"disabled":""}>›</button>
+         </div>`
+      : "";
+
+    optionsBox.innerHTML=optionHtml+pagerHtml;
 
     optionsBox.querySelectorAll(".smart-select-option").forEach(btn=>{
       btn.addEventListener("click",()=>{
@@ -119,12 +133,25 @@ function enhanceSelect(select){
         syncLabel();
         wrapper.classList.remove("open");
         searchInput.value="";
+        smartPage=1;
         renderOptions("");
+      });
+    });
+
+    optionsBox.querySelectorAll(".smart-select-page-btn").forEach(btn=>{
+      btn.addEventListener("click",e=>{
+        e.preventDefault();
+        e.stopPropagation();
+        if(btn.disabled)return;
+        smartPage=Number(btn.dataset.page)||1;
+        renderOptions(searchInput.value);
+        optionsBox.scrollTop=0;
       });
     });
   }
 
   function openMenu(){
+    smartPage=1;
     closeAllSmartSelects(wrapper);
     wrapper.classList.add("open");
     searchInput.value="";
@@ -140,7 +167,7 @@ function enhanceSelect(select){
 
   backdrop.addEventListener("click",()=>wrapper.classList.remove("open"));
 
-  searchInput.addEventListener("input",()=>renderOptions(searchInput.value));
+  searchInput.addEventListener("input",()=>{smartPage=1;renderOptions(searchInput.value)});
 
   searchInput.addEventListener("keydown",e=>{
     if(e.key==="Escape") wrapper.classList.remove("open");
@@ -167,6 +194,20 @@ function esc(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt
 function today(){return new Date().toISOString().slice(0,10)}
 function fmtDate(d){return d?new Date(d+"T00:00:00").toLocaleDateString("ar-EG"):"—"}
 function ts(v){if(!v)return new Date().toISOString();if(typeof v==="string")return v;if(v.toDate)return v.toDate().toISOString();return new Date().toISOString()}
+
+function createdTime(value){
+  if(!value) return Number.MAX_SAFE_INTEGER;
+  if(typeof value.toMillis==="function") return value.toMillis();
+  if(typeof value.seconds==="number") return value.seconds*1000;
+  const parsed=new Date(value).getTime();
+  return Number.isFinite(parsed)?parsed:Number.MAX_SAFE_INTEGER;
+}
+function sortByCreatedAsc(a,b){
+  const diff=createdTime(a.createdAt)-createdTime(b.createdAt);
+  if(diff!==0) return diff;
+  return (a.name||"").localeCompare(b.name||"","ar");
+}
+
 function toast(msg){const e=$("toast");e.textContent=msg;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),2800)}
 function errMsg(e){const c=e?.code||"";if(/invalid-credential|wrong-password|user-not-found/.test(c))return "اسم المستخدم أو كلمة المرور غير صحيحة.";if(c.includes("network"))return "تعذر الاتصال بالإنترنت.";if(c.includes("permission-denied"))return "ليس لديك صلاحية لتنفيذ هذه العملية.";return e?.message||"حدث خطأ غير متوقع."}
 function download(name,content,type="application/json"){const b=new Blob([content],{type}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
@@ -202,9 +243,9 @@ if(configReady) onAuthStateChanged(auth,user=>{
 });
 function cleanup(){state.unsub.forEach(f=>{try{f()}catch{}});state.unsub=[]}
 function subscribeAll(){cleanup();
-  state.unsub.push(onSnapshot(collection(db,"customers"),s=>{state.customers=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||"").localeCompare(b.name||"","ar"));renderAll()},e=>toast(errMsg(e))));
-  state.unsub.push(onSnapshot(collection(db,"suppliers"),s=>{state.suppliers=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||"").localeCompare(b.name||"","ar"));renderAll()},e=>toast(errMsg(e))));
-  state.unsub.push(onSnapshot(collection(db,"attachmentTypes"),s=>{state.attachmentTypes=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||"").localeCompare(b.name||"","ar"));renderAll()},e=>toast(errMsg(e))));
+  state.unsub.push(onSnapshot(collection(db,"customers"),s=>{state.customers=s.docs.map(d=>({id:d.id,...d.data()})).sort(sortByCreatedAsc);renderAll()},e=>toast(errMsg(e))));
+  state.unsub.push(onSnapshot(collection(db,"suppliers"),s=>{state.suppliers=s.docs.map(d=>({id:d.id,...d.data()})).sort(sortByCreatedAsc);renderAll()},e=>toast(errMsg(e))));
+  state.unsub.push(onSnapshot(collection(db,"attachmentTypes"),s=>{state.attachmentTypes=s.docs.map(d=>({id:d.id,...d.data()})).sort(sortByCreatedAsc);renderAll()},e=>toast(errMsg(e))));
   state.unsub.push(onSnapshot(collection(db,"records"),s=>{state.records=s.docs.map(d=>{const x=d.data();return{id:d.id,...x,createdAt:ts(x.createdAt),updatedAt:ts(x.updatedAt)}}).sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));renderAll()},e=>toast(errMsg(e))));
 }
 function startApp(){$("loginPage").classList.add("hidden");$("appPage").classList.remove("hidden");$("currentUser").textContent=state.currentUser;$("avatar").textContent=state.currentUser[0];renderAll();goPage("dashboard");enhanceAllSelects()}
