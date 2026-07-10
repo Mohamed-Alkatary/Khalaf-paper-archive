@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <meta name="theme-color" content="#0f2747" />
   <title>مخزن خلاف للورق</title>
+  <meta name="description" content="نظام إدارة وأرشفة مرفقات العملاء والموردين">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f2747'/%3E%3Cpath d='M16 14h28a6 6 0 0 1 6 6v30H22a6 6 0 0 1-6-6V14Z' fill='%23fff'/%3E%3Cpath d='M23 23h18M23 31h18M23 39h12' stroke='%23d8a436' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
   <style>
     :root{
       --primary:#0f2747;
@@ -253,6 +255,174 @@
     body.dark .control,body.dark table,body.dark .list-row{background:#0f1a27;color:var(--text);border-color:var(--border)}
     body.dark th{background:#152334;color:#c7d1dd}
 
+
+    /* ===== Version 2.0 UI ===== */
+    :root{
+      --primary:#102a4c;
+      --primary-2:#1d4a7a;
+      --accent:#d7a534;
+      --bg:#f4f7fb;
+      --surface:#ffffff;
+      --text:#182235;
+      --muted:#748094;
+      --border:#e1e7ef;
+      --radius:16px;
+    }
+    body{font-family:"Segoe UI",Tahoma,Arial,sans-serif}
+
+    /* Login */
+    #loginPage{
+      min-height:100vh;
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 430px;
+      background:
+        radial-gradient(circle at 16% 16%,rgba(215,165,52,.15),transparent 22%),
+        radial-gradient(circle at 70% 85%,rgba(66,118,169,.18),transparent 28%),
+        linear-gradient(145deg,#071522 0%,#102a4c 55%,#173f69 100%);
+      overflow:hidden;
+    }
+    .login-brand{
+      position:relative;
+      padding:44px 58px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      color:#fff;
+      overflow:hidden;
+    }
+    .login-brand:before{
+      content:"";
+      position:absolute;
+      width:500px;height:500px;
+      border:1px solid rgba(255,255,255,.07);
+      border-radius:50%;
+      left:-190px;bottom:-240px;
+      box-shadow:0 0 0 60px rgba(255,255,255,.025),0 0 0 120px rgba(255,255,255,.018);
+    }
+    .login-brand:after{
+      content:"";
+      position:absolute;
+      width:300px;height:300px;
+      border-radius:50%;
+      background:radial-gradient(circle,rgba(215,165,52,.14),transparent 68%);
+      right:8%;top:8%;
+      border:0;box-shadow:none;
+    }
+    .login-brand>.brand-line{
+      position:absolute;
+      right:54px;top:42px;
+    }
+    .logo{
+      background:linear-gradient(145deg,#f0ca70,#c9942c);
+      box-shadow:0 12px 28px rgba(215,165,52,.25);
+    }
+    .hero-copy{max-width:660px;position:relative;z-index:1}
+    .hero-kicker{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 12px;border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);border-radius:999px;
+      font-size:12px;margin-bottom:22px;color:rgba(255,255,255,.86)
+    }
+    .hero-copy h1{
+      font-size:50px;line-height:1.3;margin:0 0 16px;
+      letter-spacing:-1px;
+    }
+    .hero-copy p{font-size:16px;line-height:2;max-width:520px;opacity:.76;margin:0}
+    .features{display:none}
+
+    .login-panel{
+      position:relative;background:#f8fafc;
+      display:flex;align-items:center;justify-content:center;
+      padding:30px;border-radius:34px 0 0 34px;
+      box-shadow:-18px 0 60px rgba(0,0,0,.14)
+    }
+    .login-card{
+      width:100%;max-width:370px;background:#fff;
+      padding:32px 28px 24px;border-radius:22px;
+      border:1px solid rgba(16,42,76,.07);
+      box-shadow:0 18px 50px rgba(16,42,76,.09)
+    }
+    .login-card .login-mark{
+      width:48px;height:48px;border-radius:14px;
+      display:grid;place-items:center;
+      background:#edf3f9;color:var(--primary);
+      font-size:22px;margin-bottom:18px
+    }
+    .login-card h2{font-size:25px;margin:0 0 6px}
+    .login-card>p{font-size:13px;margin:0 0 22px;color:var(--muted)}
+    .login-card .field label{font-size:12px}
+    .login-card .control{padding:13px 14px;background:#fbfcfe}
+    .login-signature{
+      direction:ltr;text-align:center;
+      color:#919bab;font-size:10px;
+      border-top:1px solid var(--border);
+      margin-top:18px;padding-top:14px;letter-spacing:.2px
+    }
+
+    /* App shell */
+    .topbar{
+      height:68px;padding:0 18px;
+      box-shadow:0 4px 18px rgba(16,42,76,.05)
+    }
+    .top-brand .logo{width:42px;height:42px;border-radius:13px}
+    .top-brand strong{font-size:16px}
+    .top-brand small{font-size:11px}
+    .layout{grid-template-columns:242px 1fr;min-height:calc(100vh - 68px)}
+    aside{top:68px;height:calc(100vh - 68px);padding:16px 12px;background:linear-gradient(180deg,#102a4c,#0b213b)}
+    .nav-title{font-size:10px;letter-spacing:.3px;padding:12px 11px 6px}
+    .nav-btn{padding:11px 12px;border-radius:11px;font-size:13px}
+    .nav-btn.active{background:rgba(255,255,255,.12);box-shadow:inset -3px 0 0 var(--accent)}
+    main{padding:22px}
+    .page-head{margin-bottom:17px}
+    .page-head h2{font-size:23px}
+    .page-head p{font-size:12px}
+    .card{border-radius:16px;padding:18px;box-shadow:0 8px 25px rgba(16,42,76,.045)}
+    .stat{border-radius:15px;padding:16px;box-shadow:0 7px 20px rgba(16,42,76,.04)}
+    .stat strong{font-size:25px}
+    .section-note{
+      display:flex;align-items:center;gap:9px;
+      background:#fff8e6;color:#785b16;border:1px solid #f1dfae;
+      padding:11px 13px;border-radius:12px
+    }
+    .section-note:before{
+      content:"!";width:22px;height:22px;border-radius:50%;
+      display:grid;place-items:center;background:var(--accent);
+      color:#fff;font-weight:800;flex:none
+    }
+    .app-footer{
+      margin:28px 0 10px;text-align:center;
+      color:#98a2b2;font-size:10px;direction:ltr
+    }
+    .mobile-nav{border-top-color:var(--border)}
+
+    body.dark .login-panel{background:#0f1b29}
+    body.dark .login-card{background:#111d2b}
+    body.dark .login-card .login-mark{background:#1a2a3d;color:#fff}
+    body.dark .section-note{background:#2b2619;color:#ead69a;border-color:#564a2b}
+    body.dark .mobile-nav{background:#111d2b}
+
+    @media(max-width:900px){
+      #loginPage{
+        display:flex;align-items:center;justify-content:center;
+        padding:18px;background:
+          radial-gradient(circle at 50% 0,rgba(215,165,52,.15),transparent 25%),
+          linear-gradient(160deg,#071522,#173f69)
+      }
+      .login-brand{display:none}
+      .login-panel{
+        width:100%;min-height:auto;padding:0;
+        border-radius:0;background:transparent;box-shadow:none
+      }
+      .login-card{
+        max-width:400px;padding:25px 20px 22px;
+        box-shadow:0 24px 65px rgba(0,0,0,.25)
+      }
+      .login-card .mobile-logo{display:flex;margin-bottom:20px}
+      .layout{display:block}
+      main{padding:14px 12px 88px}
+      .app-footer{margin-bottom:14px}
+    }
+
 </style>
 </head>
 <body>
@@ -274,12 +444,10 @@
     </div>
 
     <div class="hero-copy">
-      <h1>كل مستنداتك<br>في مكان واحد آمن ومنظم</h1>
-      <p>سجّل مرفقات العملاء والموردين، ابحث عنها بسهولة، وعدّل أو نزّل أي ملف في أي وقت من الهاتف أو الكمبيوتر.</p>
+      <div class="hero-kicker">نظام إدارة المرفقات</div>
+      <h1>كل مستنداتك<br>في مكان واحد.</h1>
+      <p>إدارة منظمة وسريعة لمرفقات العملاء والموردين.</p>
     </div>
-
-    <div class="features">
-      <div class="feature"><strong>أرشفة ذكية</strong><span>تنظيم سريع وسهل للملفات</span></div>
       <div class="feature"><strong>متوافق مع الموبايل</strong><span>تصوير ورفع مباشر من الهاتف</span></div>
       <div class="feature"><strong>بحث متقدم</strong><span>فلاتر كاملة للوصول لأي مستند</span></div>
     </div>
@@ -291,10 +459,11 @@
         <div class="logo">
           <svg viewBox="0 0 64 64" fill="none"><path d="M14 14h29a7 7 0 0 1 7 7v29H21a7 7 0 0 1-7-7V14Z" fill="#fff"/><path d="M22 22h20M22 30h20M22 38h13" stroke="#0f2747" stroke-width="4" stroke-linecap="round"/></svg>
         </div>
-        <div><strong style="font-size:18px;color:#172033">مخزن خلاف للورق</strong><small style="display:block;color:#6e7888;margin-top:5px">نظام إدارة وأرشفة المستندات</small></div>
+        <div><strong style="font-size:18px;color:#172033">مخزن خلاف للورق</strong><small style="display:block;color:#6e7888;margin-top:5px">إدارة المرفقات</small></div>
       </div>
-      <h2>مرحباً بعودتك</h2>
-      <p>سجّل الدخول للوصول إلى لوحة إدارة المرفقات.</p>
+      <div class="login-mark">↪</div>
+      <h2>تسجيل الدخول</h2>
+      <p>أدخل بيانات حسابك للمتابعة.</p>
       <div id="loginError" class="error hidden">اسم المستخدم أو كلمة المرور غير صحيحة.</div>
       <div class="field">
         <label>اسم المستخدم</label>
@@ -308,7 +477,7 @@
         </div>
       </div>
       <button class="btn btn-primary btn-block" type="submit">تسجيل الدخول</button>
-      <div class="login-foot">© 2026 مخزن خلاف للورق — جميع الحقوق محفوظة</div>
+      <div class="login-signature">Mohamed_Reda_01124975452</div>
     </form>
   </div>
 </section>
@@ -352,6 +521,7 @@
       <section id="supplierEntry" class="page-section hidden"></section>
       <section id="supplierQuery" class="page-section hidden"></section>
       <section id="backup" class="page-section hidden"></section>
+      <div class="app-footer">Mohamed_Reda_01124975452</div>
     </main>
   </div>
 
