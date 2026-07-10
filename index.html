@@ -765,6 +765,217 @@ body.dark .list-empty-state .empty-icon{
   .list-row .btn{padding:8px 10px;font-size:11px}
 }
 
+
+/* ===== Searchable Select ===== */
+.smart-select{
+  position:relative;
+  width:100%;
+}
+.smart-select-trigger{
+  width:100%;
+  min-height:48px;
+  border:1px solid var(--border);
+  background:#fbfcfe;
+  color:var(--text);
+  border-radius:13px;
+  padding:12px 42px 12px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  text-align:right;
+  cursor:pointer;
+  transition:.2s;
+}
+.smart-select-trigger:hover{
+  border-color:#c8d3df;
+}
+.smart-select.open .smart-select-trigger,
+.smart-select-trigger:focus{
+  border-color:var(--primary-2);
+  box-shadow:0 0 0 4px rgba(29,74,122,.08);
+  background:#fff;
+  outline:none;
+}
+.smart-select-trigger:after{
+  content:"⌄";
+  position:absolute;
+  left:14px;
+  color:#7e8998;
+  font-size:15px;
+  transition:.2s;
+}
+.smart-select.open .smart-select-trigger:after{
+  transform:rotate(180deg);
+}
+.smart-select-value.placeholder{
+  color:#8c96a5;
+}
+.smart-select-menu{
+  position:absolute;
+  right:0;
+  left:0;
+  top:calc(100% + 7px);
+  z-index:120;
+  display:none;
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:14px;
+  box-shadow:0 18px 45px rgba(16,42,76,.15);
+  overflow:hidden;
+}
+.smart-select.open .smart-select-menu{
+  display:block;
+  animation:smartDrop .16s ease;
+}
+@keyframes smartDrop{
+  from{opacity:0;transform:translateY(-5px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.smart-select-search{
+  padding:10px;
+  border-bottom:1px solid var(--border);
+  background:#f8fafc;
+}
+.smart-select-search-wrap{
+  position:relative;
+}
+.smart-select-search-wrap:before{
+  content:"⌕";
+  position:absolute;
+  right:11px;
+  top:50%;
+  transform:translateY(-50%);
+  color:#8994a4;
+  font-size:14px;
+}
+.smart-select-search input{
+  width:100%;
+  border:1px solid var(--border);
+  background:#fff;
+  color:var(--text);
+  border-radius:10px;
+  padding:10px 34px 10px 11px;
+  outline:none;
+  font-size:12px;
+}
+.smart-select-search input:focus{
+  border-color:var(--primary-2);
+  box-shadow:0 0 0 3px rgba(29,74,122,.07);
+}
+.smart-select-options{
+  max-height:240px;
+  overflow:auto;
+  padding:6px;
+}
+.smart-select-option{
+  width:100%;
+  border:0;
+  background:transparent;
+  color:var(--text);
+  border-radius:9px;
+  padding:10px 11px;
+  text-align:right;
+  font-size:12px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.smart-select-option:hover{
+  background:#f1f5f9;
+}
+.smart-select-option.selected{
+  background:#edf3f9;
+  color:var(--primary);
+  font-weight:700;
+}
+.smart-select-option.selected:after{
+  content:"✓";
+  color:var(--accent);
+  font-weight:900;
+}
+.smart-select-empty{
+  padding:20px 12px;
+  text-align:center;
+  color:var(--muted);
+  font-size:12px;
+}
+.smart-select-native{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+body.dark .smart-select-trigger{
+  background:#0f1a27;
+  color:#eef4fb;
+  border-color:#253447;
+}
+body.dark .smart-select.open .smart-select-trigger{
+  background:#101d2c;
+}
+body.dark .smart-select-menu{
+  background:#111d2b;
+  border-color:#253447;
+}
+body.dark .smart-select-search{
+  background:#0f1a27;
+  border-color:#253447;
+}
+body.dark .smart-select-search input{
+  background:#0d1723;
+  color:#eef4fb;
+  border-color:#253447;
+}
+body.dark .smart-select-option{
+  color:#eef4fb;
+}
+body.dark .smart-select-option:hover,
+body.dark .smart-select-option.selected{
+  background:#1a2a3d;
+}
+@media(max-width:600px){
+  .smart-select-menu{
+    position:fixed;
+    right:14px;
+    left:14px;
+    top:50%;
+    transform:translateY(-50%);
+    max-height:70vh;
+    border-radius:18px;
+    z-index:300;
+  }
+  .smart-select.open .smart-select-menu{
+    animation:smartMobile .18s ease;
+  }
+  @keyframes smartMobile{
+    from{opacity:0;transform:translateY(-46%) scale(.98)}
+    to{opacity:1;transform:translateY(-50%) scale(1)}
+  }
+  .smart-select-options{
+    max-height:52vh;
+  }
+  .smart-select-search input{
+    padding:12px 36px 12px 12px;
+    font-size:14px;
+  }
+  .smart-select-option{
+    padding:13px 12px;
+    font-size:14px;
+  }
+  .smart-select-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(5,15,27,.55);
+    z-index:299;
+    display:none;
+  }
+  .smart-select.open .smart-select-backdrop{
+    display:block;
+  }
+}
+
 </style>
 </head>
 <body>
