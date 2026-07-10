@@ -23,6 +23,14 @@ const configReady = !Object.values(firebaseConfig).some(v => String(v).includes(
 let auth, db;
 const state = {customers:[], suppliers:[], attachmentTypes:[], records:[], currentUser:"", currentEmail:"", selectedImage:"", unsub:[]};
 
+const LIST_PAGE_SIZE = 6;
+const listUiState = {
+  customers: { search: "", page: 1 },
+  suppliers: { search: "", page: 1 },
+  attachmentTypes: { search: "", page: 1 }
+};
+
+
 const $ = id => document.getElementById(id);
 function esc(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));}
 function today(){return new Date().toISOString().slice(0,10)}
@@ -74,10 +82,180 @@ function goPage(page){document.querySelectorAll(".page-section").forEach(s=>s.cl
 function renderAll(){if($("appPage").classList.contains("hidden"))return;renderDashboard();renderLists();if(!$("customerEntry").dataset.editing)renderEntry("customer");if(!$("supplierEntry").dataset.editing)renderEntry("supplier");renderBackup();if(!$("customerQuery").classList.contains("hidden"))renderQuery("customer");if(!$("supplierQuery").classList.contains("hidden"))renderQuery("supplier")}
 
 function renderDashboard(){const c=state.records.filter(r=>r.entityType==="customer").length,s=state.records.filter(r=>r.entityType==="supplier").length,total=state.records.reduce((a,r)=>a+(Number(r.value)||0),0),recent=state.records.slice(0,6);$("dashboard").innerHTML=`<div class="page-head"><div><h2>لوحة التحكم</h2><p>نظرة سريعة على أرشيف مخزن خلاف للورق.</p></div></div><div class="stats"><div class="stat"><span>مرفقات العملاء</span><strong>${c}</strong></div><div class="stat"><span>مرفقات الموردين</span><strong>${s}</strong></div><div class="stat"><span>إجمالي المرفقات</span><strong>${state.records.length}</strong></div><div class="stat"><span>إجمالي القيم</span><strong>${total.toLocaleString("ar-EG")}</strong></div></div><div class="card"><div class="card-title"><h3>أحدث المرفقات</h3></div>${recent.length?table(recent):'<div class="empty">لا توجد مرفقات مسجلة حتى الآن.</div>'}</div>`}
-function renderLists(){$("lists").innerHTML=`<div class="page-head"><div><h2>القوائم الأساسية</h2><p>أضف أو احذف العملاء والموردين وأنواع المرفقات.</p></div></div><div class="grid grid-3">${listCard("customers","قائمة العملاء","اسم العميل")}${listCard("suppliers","قائمة الموردين","اسم المورد")}${listCard("attachmentTypes","أنواع المرفقات","نوع المرفق")}</div>`}
-function listCard(key,title,ph){const arr=state[key];return `<div class="card"><div class="card-title"><h3>${title}</h3><span class="badge">${arr.length}</span></div><div style="display:flex;gap:8px;margin-bottom:15px"><input class="control" id="input_${key}" placeholder="${ph}"><button class="btn btn-primary" onclick="addListItem('${key}')">إضافة</button></div>${arr.length?arr.map(x=>`<div class="list-row"><span>${esc(x.name)}</span><button class="btn btn-danger" onclick="deleteListItem('${key}','${x.id}')">حذف</button></div>`).join(""):'<div class="empty">القائمة فارغة.</div>'}</div>`}
-window.addListItem=async key=>{const input=$("input_"+key),v=input.value.trim();if(!v)return toast("اكتب الاسم أولاً.");if(state[key].some(x=>(x.name||"").toLowerCase()===v.toLowerCase()))return toast("هذا الاسم موجود بالفعل.");try{await addDoc(collection(db,key),{name:v,createdBy:state.currentUser,createdAt:serverTimestamp()});toast("تمت الإضافة بنجاح.")}catch(e){toast(errMsg(e))}};
-window.deleteListItem=async(key,id)=>{if(!confirm("هل تريد حذف هذا العنصر؟"))return;try{await deleteDoc(doc(db,key,id));toast("تم الحذف.")}catch(e){toast(errMsg(e))}};
+
+function renderLists(){
+  $("lists").innerHTML=`
+    <div class="page-head">
+      <div>
+        <h2>القوائم الأساسية</h2>
+        <p>إدارة العملاء والموردين وأنواع المرفقات.</p>
+      </div>
+    </div>
+    <div class="grid grid-3">
+      ${listCard("customers","قائمة العملاء","اسم العميل")}
+      ${listCard("suppliers","قائمة الموردين","اسم المورد")}
+      ${listCard("attachmentTypes","أنواع المرفقات","نوع المرفق")}
+    </div>`;
+  bindListSearchInputs();
+}
+
+function listCard(key,title,ph){
+  const all=state[key];
+  const ui=listUiState[key];
+  const term=ui.search.trim().toLowerCase();
+
+  const filtered=term
+    ? all.filter(x=>(x.name||"").toLowerCase().includes(term))
+    : all;
+
+  const totalPages=Math.max(1,Math.ceil(filtered.length/LIST_PAGE_SIZE));
+  if(ui.page>totalPages) ui.page=totalPages;
+  if(ui.page<1) ui.page=1;
+
+  const start=(ui.page-1)*LIST_PAGE_SIZE;
+  const pageItems=filtered.slice(start,start+LIST_PAGE_SIZE);
+
+  return `
+    <div class="card">
+      <div class="card-title">
+        <h3>${title}</h3>
+        <span class="badge">${all.length}</span>
+      </div>
+
+      <div class="list-toolbar">
+        <div class="list-search">
+          <span class="search-icon">⌕</span>
+          <input
+            id="search_${key}"
+            value="${esc(ui.search)}"
+            placeholder="بحث داخل القائمة..."
+            autocomplete="off"
+          >
+        </div>
+      </div>
+
+      <div class="list-add-row">
+        <input class="control" id="input_${key}" placeholder="${ph}">
+        <button class="btn btn-primary" onclick="addListItem('${key}')">إضافة</button>
+      </div>
+
+      <div class="list-items" id="items_${key}">
+        ${pageItems.length
+          ? pageItems.map(x=>`
+              <div class="list-row">
+                <span class="item-name" title="${esc(x.name)}">${esc(x.name)}</span>
+                <button class="btn btn-danger" onclick="deleteListItem('${key}','${x.id}')">حذف</button>
+              </div>
+            `).join("")
+          : `<div class="list-empty-state">
+               <div class="empty-icon">⌕</div>
+               <div>${term?"لا توجد نتائج مطابقة.":"القائمة فارغة."}</div>
+             </div>`
+        }
+      </div>
+
+      <div class="list-footer">
+        <div class="list-count">
+          ${filtered.length
+            ? `عرض ${start+1} - ${Math.min(start+LIST_PAGE_SIZE,filtered.length)} من ${filtered.length}`
+            : "لا توجد عناصر"}
+        </div>
+        ${paginationHtml(key,ui.page,totalPages)}
+      </div>
+    </div>`;
+}
+
+function paginationHtml(key,current,total){
+  if(total<=1){
+    return `<div class="pagination">
+      <button class="page-btn" disabled>‹</button>
+      <button class="page-btn active">1</button>
+      <button class="page-btn" disabled>›</button>
+    </div>`;
+  }
+
+  const pages=[];
+  const add=p=>{if(p>=1&&p<=total&&!pages.includes(p))pages.push(p)};
+
+  add(1);
+  add(current-1);
+  add(current);
+  add(current+1);
+  add(total);
+  pages.sort((a,b)=>a-b);
+
+  let html=`<div class="pagination">
+    <button class="page-btn" ${current===1?"disabled":""} onclick="changeListPage('${key}',${current-1})">‹</button>`;
+
+  let prev=0;
+  for(const p of pages){
+    if(prev && p-prev>1) html+=`<span class="page-ellipsis">…</span>`;
+    html+=`<button class="page-btn ${p===current?"active":""}" onclick="changeListPage('${key}',${p})">${p}</button>`;
+    prev=p;
+  }
+
+  html+=`<button class="page-btn" ${current===total?"disabled":""} onclick="changeListPage('${key}',${current+1})">›</button></div>`;
+  return html;
+}
+
+function bindListSearchInputs(){
+  ["customers","suppliers","attachmentTypes"].forEach(key=>{
+    const addInput=$("input_"+key);
+    if(addInput){
+      addInput.addEventListener("keydown",e=>{
+        if(e.key==="Enter"){
+          e.preventDefault();
+          addListItem(key);
+        }
+      });
+    }
+    const input=$("search_"+key);
+    if(!input) return;
+    input.addEventListener("input",e=>{
+      listUiState[key].search=e.target.value;
+      listUiState[key].page=1;
+      renderLists();
+      requestAnimationFrame(()=>{
+        const refreshed=$("search_"+key);
+        if(refreshed){
+          refreshed.focus();
+          const len=refreshed.value.length;
+          refreshed.setSelectionRange(len,len);
+        }
+      });
+    });
+  });
+}
+
+window.changeListPage=(key,page)=>{
+  listUiState[key].page=page;
+  renderLists();
+  const section=$("lists");
+  if(section && window.innerWidth<900){
+    section.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+};
+
+window.addListItem=async key=>{
+  const input=$("input_"+key),v=input.value.trim();
+  if(!v)return toast("اكتب الاسم أولاً.");
+  if(state[key].some(x=>(x.name||"").toLowerCase()===v.toLowerCase()))return toast("هذا الاسم موجود بالفعل.");
+  try{
+    await addDoc(collection(db,key),{name:v,createdBy:state.currentUser,createdAt:serverTimestamp()});
+    listUiState[key].search="";
+    listUiState[key].page=1;
+    toast("تمت الإضافة بنجاح.");
+  }catch(e){toast(errMsg(e))}
+};
+
+window.deleteListItem=async(key,id)=>{
+  if(!confirm("هل تريد حذف هذا العنصر؟"))return;
+  try{
+    await deleteDoc(doc(db,key,id));
+    toast("تم الحذف.");
+  }catch(e){toast(errMsg(e))}
+};
+
 function opts(arr,selected=""){return '<option value="">اختر...</option>'+arr.map(x=>`<option value="${x.id}" ${x.id===selected?"selected":""}>${esc(x.name)}</option>`).join("")}
 
 function renderEntry(type,record=null){const isC=type==="customer",target=$(isC?"customerEntry":"supplierEntry"),list=isC?state.customers:state.suppliers,title=isC?"العميل":"المورد",r=record||{};if(record)target.dataset.editing="1";else delete target.dataset.editing;state.selectedImage=r.imageData||"";target.innerHTML=`<div class="page-head"><div><h2>${record?"تعديل":"إضافة"} مرفق ${title}</h2><p>سجّل البيانات وارفع صورة من الهاتف أو الكمبيوتر.</p></div><button class="btn btn-secondary" onclick="openPrevious('${type}')">السابق</button></div><div class="card"><form id="${type}Form"><div class="grid grid-3"><div class="field"><label>${title}</label><select class="control" id="${type}_entity" required>${opts(list,r.entityId)}</select></div><div class="field"><label>نوع المرفق</label><select class="control" id="${type}_attachment" required>${opts(state.attachmentTypes,r.attachmentTypeId)}</select></div><div class="field"><label>التاريخ</label><input class="control" type="date" id="${type}_date" value="${r.date||today()}" required></div><div class="field"><label>القيمة <small style="color:#8a94a3">(اختياري)</small></label><input class="control" type="number" min="0" step="0.01" id="${type}_value" value="${r.value??""}"></div><div class="field full"><label>ملاحظات <small style="color:#8a94a3">(اختياري)</small></label><textarea class="control" id="${type}_notes">${esc(r.notes||"")}</textarea></div><div class="field full"><label>صورة المرفق</label><label class="upload"><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" id="${type}_image"><div style="font-size:29px">📷</div><strong>اضغط للتصوير أو اختيار صورة</strong><div class="preview" id="${type}_preview" style="${state.selectedImage?"display:block":""}">${state.selectedImage?`<img src="${state.selectedImage}">`:""}</div></label></div></div><div class="actions"><button class="btn btn-primary" id="${type}_save" type="submit">${record?"حفظ التعديلات":"حفظ المرفق"}</button>${record?`<button class="btn btn-secondary" type="button" onclick="cancelEdit('${type}')">إلغاء</button>`:""}</div></form></div><div class="section-note">تأكد من وضوح صورة المرفق قبل الحفظ.</div>`;
