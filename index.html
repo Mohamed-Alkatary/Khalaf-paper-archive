@@ -976,6 +976,74 @@ body.dark .smart-select-option.selected{
   }
 }
 
+
+/* ===== Query on demand + mobile nav refinements ===== */
+.query-placeholder{
+  min-height:260px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  color:var(--muted);
+  gap:10px;
+  padding:25px;
+}
+.query-placeholder .query-icon{
+  width:54px;height:54px;border-radius:17px;
+  display:grid;place-items:center;
+  background:#eef3f8;color:var(--primary);
+  font-size:24px;
+}
+.query-placeholder strong{
+  color:var(--text);
+  font-size:14px;
+}
+.query-placeholder span{
+  font-size:12px;
+  line-height:1.8;
+}
+.query-action-row{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  flex-wrap:wrap;
+  margin-top:17px;
+}
+.query-action-row .btn{
+  min-width:120px;
+}
+.smart-select-hint{
+  padding:8px 11px;
+  color:var(--muted);
+  font-size:10px;
+  text-align:center;
+  border-top:1px solid var(--border);
+  background:#fafbfd;
+}
+body.dark .query-placeholder .query-icon{
+  background:#1a2a3d;
+  color:#fff;
+}
+body.dark .smart-select-hint{
+  background:#0f1a27;
+  border-color:#253447;
+}
+@media(max-width:900px){
+  .mobile-nav button{
+    min-width:86px;
+    flex:0 0 86px;
+  }
+  .query-action-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+  .query-action-row .btn{
+    min-width:0;
+    width:100%;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1065,9 +1133,10 @@ body.dark .smart-select-option.selected{
   <nav class="mobile-nav">
     <button class="active" data-page="dashboard"><span>⌂</span>الرئيسية</button>
     <button data-page="lists"><span>☷</span>القوائم</button>
-    <button data-page="customerEntry"><span>👤</span>عميل</button>
-    <button data-page="supplierEntry"><span>🚚</span>مورد</button>
-    <button data-page="customerQuery"><span>⌕</span>استعلام</button>
+    <button data-page="customerEntry"><span>👤</span>إضافة عميل</button>
+    <button data-page="supplierEntry"><span>🚚</span>إضافة مورد</button>
+    <button data-page="customerQuery"><span>⌕</span>استعلام عملاء</button>
+    <button data-page="supplierQuery"><span>⌕</span>استعلام موردين</button>
   </nav>
 </section>
 
