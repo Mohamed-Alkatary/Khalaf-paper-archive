@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0f2747" />
   <title>مخزن خلاف للورق</title>
   <meta name="description" content="نظام إدارة وأرشفة مرفقات العملاء والموردين">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f2747'/%3E%3Cpath d='M16 14h28a6 6 0 0 1 6 6v30H22a6 6 0 0 1-6-6V14Z' fill='%23fff'/%3E%3Cpath d='M23 23h18M23 31h18M23 39h12' stroke='%23d8a436' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23102a4c'/%3E%3Crect x='14' y='16' width='36' height='10' rx='5' fill='%23d8a436'/%3E%3Crect x='14' y='28' width='28' height='10' rx='5' fill='%23ffffff'/%3E%3Crect x='14' y='40' width='20' height='10' rx='5' fill='%23d8a436'/%3E%3C/svg%3E">
   <style>
     :root{
       --primary:#0f2747;
@@ -423,60 +423,205 @@
       .app-footer{margin-bottom:14px}
     }
 
+
+/* ===== Clean centered login ===== */
+#loginPage{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(216,164,54,.14), transparent 24%),
+    radial-gradient(circle at 80% 85%, rgba(75,132,188,.16), transparent 28%),
+    linear-gradient(145deg,#081624 0%,#102a4c 60%,#173f69 100%);
+  position:relative;
+  overflow:hidden;
+}
+#loginPage:before,
+#loginPage:after{
+  content:"";
+  position:absolute;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,.06);
+  pointer-events:none;
+}
+#loginPage:before{
+  width:480px;height:480px;
+  right:-220px;top:-220px;
+  box-shadow:0 0 0 60px rgba(255,255,255,.02),0 0 0 120px rgba(255,255,255,.012);
+}
+#loginPage:after{
+  width:360px;height:360px;
+  left:-180px;bottom:-180px;
+  box-shadow:0 0 0 45px rgba(255,255,255,.018);
+}
+.login-shell{
+  width:min(430px,100%);
+  position:relative;
+  z-index:2;
+}
+.login-brand-compact{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  margin-bottom:20px;
+  color:#fff;
+}
+.modern-logo{
+  width:58px;height:58px;
+  border-radius:18px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.13);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:5px;
+  padding:13px;
+  box-shadow:0 14px 34px rgba(0,0,0,.2);
+  backdrop-filter:blur(8px);
+}
+.modern-logo span{
+  height:7px;border-radius:999px;display:block;
+}
+.modern-logo span:nth-child(1){width:100%;background:#d8a436}
+.modern-logo span:nth-child(2){width:76%;background:#fff}
+.modern-logo span:nth-child(3){width:52%;background:#d8a436}
+.login-system-name{
+  font-size:24px;
+  font-weight:800;
+  line-height:1.2;
+}
+.login-system-sub{
+  margin-top:5px;
+  font-size:12px;
+  color:rgba(255,255,255,.64);
+}
+.login-card{
+  width:100%;
+  max-width:none;
+  background:rgba(255,255,255,.98);
+  padding:30px;
+  border-radius:24px;
+  border:1px solid rgba(255,255,255,.35);
+  box-shadow:0 28px 75px rgba(0,0,0,.26);
+  backdrop-filter:blur(14px);
+}
+.login-title{
+  text-align:center;
+  margin-bottom:24px;
+}
+.login-title h2{
+  margin:0;
+  font-size:25px;
+  color:#172033;
+}
+.login-title p{
+  margin:7px 0 0;
+  font-size:12px;
+  color:#7a8596;
+}
+.login-card .field{margin-bottom:16px}
+.login-card .field label{
+  font-size:12px;
+  margin-bottom:7px;
+}
+.login-card .control{
+  padding:13px 14px;
+  background:#f9fbfd;
+  border-radius:12px;
+}
+.login-card .btn-block{
+  padding:13px;
+  border-radius:12px;
+  margin-top:4px;
+}
+.login-signature{
+  margin-top:17px;
+  padding-top:14px;
+  border-top:1px solid #e6ebf1;
+  text-align:center;
+  color:#98a2b1;
+  font-size:10px;
+  direction:ltr;
+}
+body.dark #loginPage{background:linear-gradient(145deg,#050d16,#0d223b)}
+body.dark .login-card{
+  background:rgba(17,29,43,.98);
+  border-color:#253447;
+}
+body.dark .login-title h2{color:#eef4fb}
+body.dark .login-title p{color:#aab5c3}
+body.dark .login-card .control{background:#0f1a27;color:#eef4fb}
+body.dark .login-signature{border-color:#253447}
+
+@media(max-width:600px){
+  #loginPage{padding:18px}
+  .login-shell{width:100%}
+  .login-brand-compact{margin-bottom:16px}
+  .modern-logo{width:52px;height:52px;border-radius:16px;padding:12px}
+  .login-system-name{font-size:20px}
+  .login-system-sub{font-size:11px}
+  .login-card{padding:24px 19px;border-radius:21px}
+  .login-title h2{font-size:23px}
+}
+
+
+.modern-top-logo{
+  padding:9px!important;
+  display:flex!important;
+  flex-direction:column;
+  justify-content:center;
+  gap:4px;
+  background:#102a4c!important;
+  box-shadow:none!important;
+}
+.modern-top-logo span{height:5px;border-radius:999px;display:block}
+.modern-top-logo span:nth-child(1){width:100%;background:#d8a436}
+.modern-top-logo span:nth-child(2){width:76%;background:#fff}
+.modern-top-logo span:nth-child(3){width:52%;background:#d8a436}
+
 </style>
 </head>
 <body>
 
+
 <section id="loginPage">
-  <div class="login-brand">
-    <div class="brand-line">
-      <div class="logo">
-        <svg viewBox="0 0 64 64" fill="none">
-          <path d="M14 14h29a7 7 0 0 1 7 7v29H21a7 7 0 0 1-7-7V14Z" fill="#fff" opacity=".95"/>
-          <path d="M22 22h20M22 30h20M22 38h13" stroke="#0f2747" stroke-width="4" stroke-linecap="round"/>
-          <path d="m38 47 12-12v15H35l3-3Z" fill="#0f2747"/>
-        </svg>
+  <div class="login-shell">
+    <div class="login-brand-compact">
+      <div class="modern-logo" aria-label="شعار مخزن خلاف للورق">
+        <span></span><span></span><span></span>
       </div>
       <div>
-        <div class="brand-title">مخزن خلاف للورق</div>
-        <div class="brand-sub">نظام إدارة وأرشفة المستندات</div>
+        <div class="login-system-name">مخزن خلاف للورق</div>
+        <div class="login-system-sub">إدارة وأرشفة المرفقات</div>
       </div>
     </div>
 
-    <div class="hero-copy">
-      <div class="hero-kicker">نظام إدارة المرفقات</div>
-      <h1>كل مستنداتك<br>في مكان واحد.</h1>
-      <p>إدارة منظمة وسريعة لمرفقات العملاء والموردين.</p>
-    </div>
-      <div class="feature"><strong>متوافق مع الموبايل</strong><span>تصوير ورفع مباشر من الهاتف</span></div>
-      <div class="feature"><strong>بحث متقدم</strong><span>فلاتر كاملة للوصول لأي مستند</span></div>
-    </div>
-  </div>
-
-  <div class="login-panel">
     <form class="login-card" id="loginForm">
-      <div class="mobile-logo brand-line">
-        <div class="logo">
-          <svg viewBox="0 0 64 64" fill="none"><path d="M14 14h29a7 7 0 0 1 7 7v29H21a7 7 0 0 1-7-7V14Z" fill="#fff"/><path d="M22 22h20M22 30h20M22 38h13" stroke="#0f2747" stroke-width="4" stroke-linecap="round"/></svg>
-        </div>
-        <div><strong style="font-size:18px;color:#172033">مخزن خلاف للورق</strong><small style="display:block;color:#6e7888;margin-top:5px">إدارة المرفقات</small></div>
+      <div class="login-title">
+        <h2>تسجيل الدخول</h2>
+        <p>أدخل بيانات حسابك للمتابعة</p>
       </div>
-      <div class="login-mark">↪</div>
-      <h2>تسجيل الدخول</h2>
-      <p>أدخل بيانات حسابك للمتابعة.</p>
+
       <div id="loginError" class="error hidden">اسم المستخدم أو كلمة المرور غير صحيحة.</div>
+
       <div class="field">
         <label>اسم المستخدم</label>
-        <input class="control" id="username" autocomplete="username" required placeholder="أدخل اسم المستخدم">
+        <input class="control" id="username" autocomplete="username" required placeholder="اسم المستخدم">
       </div>
+
       <div class="field">
         <label>كلمة المرور</label>
         <div class="password-wrap">
-          <input class="control" id="password" type="password" autocomplete="current-password" required placeholder="أدخل كلمة المرور">
-          <button type="button" id="togglePass" aria-label="إظهار كلمة المرور">👁</button>
+          <input class="control" id="password" type="password" autocomplete="current-password" required placeholder="كلمة المرور">
+          <button type="button" id="togglePass" aria-label="إظهار كلمة المرور">◉</button>
         </div>
       </div>
-      <button class="btn btn-primary btn-block" type="submit">تسجيل الدخول</button>
+
+      <button class="btn btn-primary btn-block" type="submit">دخول</button>
+
       <div class="login-signature">Mohamed_Reda_01124975452</div>
     </form>
   </div>
@@ -485,9 +630,7 @@
 <section id="appPage" class="hidden">
   <header class="topbar">
     <div class="top-brand">
-      <div class="logo">
-        <svg viewBox="0 0 64 64" fill="none"><path d="M14 14h29a7 7 0 0 1 7 7v29H21a7 7 0 0 1-7-7V14Z" fill="#fff"/><path d="M22 22h20M22 30h20M22 38h13" stroke="#0f2747" stroke-width="4" stroke-linecap="round"/></svg>
-      </div>
+      <div class="logo modern-top-logo"><span></span><span></span><span></span></div>
       <div class="brand-copy"><strong>مخزن خلاف للورق</strong><small>إدارة وأرشفة المستندات</small></div>
     </div>
     <div class="userbox">
