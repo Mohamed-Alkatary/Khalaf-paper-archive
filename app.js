@@ -4,7 +4,7 @@ import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot
 
 // استبدل القيم التالية ببيانات مشروعك من Firebase Console
 const firebaseConfig = {
-  apiKey: "AIzaSyAGyFFC1ri1ThAbWkfap-6u73j6NERyIv4",
+  apiKey: "AIzaSyAGyFFC1rilThAbWkfap-6u73j6NERyIv4",
   authDomain: "khalaf-paper-archive.firebaseapp.com",
   projectId: "khalaf-paper-archive",
   storageBucket: "khalaf-paper-archive.firebasestorage.app",
