@@ -1107,54 +1107,151 @@ body.dark .smart-select-page-btn.active{
 }
 
 
-/* ===== Signature ===== */
+/* ===========================
+   Signature
+=========================== */
+
 .login-signature,
 .app-footer{
-  direction:ltr;
-  text-align:center;
-  font-family:"Segoe UI",Tahoma,Arial,sans-serif;
+    direction:ltr;
+    text-align:center;
+    font-family:"Segoe UI Variable","Segoe UI",Tahoma,sans-serif;
 }
+
 .login-signature{
-  color:#748094;
-  font-size:11px;
-  font-weight:600;
+    margin-top:18px;
+    color:#7b8797;
+    font-size:13px;
+    font-weight:500;
+    letter-spacing:.2px;
 }
+
 .signature-pill{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:9px 15px;
-  border-radius:999px;
-  background:#edf3f8;
-  color:#536176;
-  border:1.5px solid #dfe7ef;
-  box-shadow:0 5px 15px rgba(16,42,76,.05);
+
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+
+    min-height:46px;
+    padding:0 22px;
+
+    border-radius:999px;
+
+    background:linear-gradient(180deg,#ffffff,#f5f8fb);
+
+    border:1px solid rgba(20,80,150,.10);
+
+    box-shadow:
+        0 8px 24px rgba(18,38,63,.08),
+        inset 0 1px 0 rgba(255,255,255,.8);
+
+    color:#58677a;
+
+    transition:.25s ease;
 }
+
+.signature-pill:hover{
+
+    transform:translateY(-2px);
+
+    box-shadow:
+        0 12px 28px rgba(18,38,63,.12),
+        inset 0 1px 0 rgba(255,255,255,.9);
+
+}
+
 .signature-pill strong{
-  color:var(--primary);
-  font-size:12px;
+
+    color:var(--primary);
+
+    font-size:14px;
+
+    font-weight:700;
+
+    letter-spacing:.3px;
+
 }
+
 .signature-dot{
-  width:4px;height:4px;border-radius:50%;
-  background:var(--accent);
+
+    width:6px;
+    height:6px;
+
+    border-radius:50%;
+
+    background:var(--accent);
+
+    box-shadow:0 0 8px var(--accent);
+
+    flex-shrink:0;
+
 }
+
 .app-footer{
-  margin:26px 0 15px;
-  color:#748094;
-  font-size:13px;
+
+    margin:28px 0 18px;
+
+    font-size:13px;
+
+    color:#7b8797;
+
+    line-height:1.8;
+
 }
+
+
+/* Dark Mode */
+
 body.dark .signature-pill{
-  background:#182738;
-  color:#aab5c3;
-  border-color:#2b3d52;
+
+    background:linear-gradient(180deg,#223446,#1a2b3c);
+
+    border:1px solid rgba(255,255,255,.08);
+
+    color:#c9d3de;
+
+    box-shadow:
+        0 8px 24px rgba(0,0,0,.35),
+        inset 0 1px 0 rgba(255,255,255,.04);
+
 }
-body.dark .signature-pill strong{color:#fff}
+
+body.dark .signature-pill strong{
+
+    color:#ffffff;
+
+}
+
+body.dark .signature-dot{
+
+    box-shadow:0 0 10px var(--accent);
+
+}
+
+
+/* Mobile */
+
 @media(max-width:600px){
-  .signature-pill{
-    padding:7px 10px;
-    gap:6px;
-    font-size:10px;
-  }
+
+.signature-pill{
+
+    padding:12px 16px;
+
+    gap:10px;
+
+    font-size:12px;
+
+    min-height:42px;
+
+}
+
+.signature-pill strong{
+
+    font-size:13px;
+
+}
+
 }
 
 </style>
