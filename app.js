@@ -24,6 +24,12 @@ let auth, db;
 const state = {customers:[], suppliers:[], attachmentTypes:[], records:[], currentUser:"", currentEmail:"", selectedImage:"", unsub:[]};
 
 const LIST_PAGE_SIZE = 6;
+
+const queryUiState = {
+  customer: { executed: false },
+  supplier: { executed: false }
+};
+
 const listUiState = {
   customers: { search: "", page: 1 },
   suppliers: { search: "", page: 1 },
@@ -87,18 +93,23 @@ function enhanceSelect(select){
 
   function renderOptions(filter=""){
     const q=filter.trim().toLowerCase();
-    const opts=[...select.options].filter(o=>{
+    const matched=[...select.options].filter(o=>{
       if(!o.value) return false;
       return !q || o.textContent.toLowerCase().includes(q);
     });
 
-    optionsBox.innerHTML=opts.length
-      ? opts.map(o=>`
+    const visible=matched.slice(0,6);
+
+    optionsBox.innerHTML=visible.length
+      ? visible.map(o=>`
           <button type="button"
                   class="smart-select-option ${o.value===select.value?"selected":""}"
                   data-value="${esc(o.value)}">
             <span>${esc(o.textContent)}</span>
           </button>`).join("")
+          + (matched.length>6
+              ? `<div class="smart-select-hint">اكتب في البحث للوصول إلى ${matched.length-6} عنصر إضافي</div>`
+              : "")
       : `<div class="smart-select-empty">لا توجد نتائج مطابقة.</div>`;
 
     optionsBox.querySelectorAll(".smart-select-option").forEach(btn=>{
@@ -395,10 +406,108 @@ window.editRecord=id=>{const r=state.records.find(x=>x.id===id);if(!r)return;clo
 window.deleteRecord=async id=>{if(!confirm("هل تريد حذف هذا المرفق نهائياً؟"))return;try{await deleteDoc(doc(db,"records",id));closeModal();toast("تم الحذف.")}catch(e){toast(errMsg(e))}};
 window.downloadImage=id=>{const r=state.records.find(x=>x.id===id);if(!r?.imageData)return;const a=document.createElement("a");a.href=r.imageData;a.download=`${r.entityName}_${r.attachmentType}_${r.date}.jpg`;document.body.appendChild(a);a.click();a.remove()};
 
-function renderQuery(type){const isC=type==="customer",page=$(isC?"customerQuery":"supplierQuery"),list=isC?state.customers:state.suppliers;page.innerHTML=`<div class="page-head"><div><h2>استعلامات ${isC?"العملاء":"الموردين"}</h2><p>ابحث وفلتر وعدّل أو نزّل أي مرفق.</p></div><button class="btn btn-primary" onclick="exportFiltered('${type}')">تنزيل النتائج CSV</button></div><div class="card"><div class="filters-bar"><div class="field"><label>${isC?"العميل":"المورد"}</label><select class="control filter" id="q_entity"><option value="">الكل</option>${list.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><div class="field"><label>نوع المرفق</label><select class="control filter" id="q_type"><option value="">الكل</option>${state.attachmentTypes.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><div class="field"><label>من تاريخ</label><input class="control filter" id="q_from" type="date"></div><div class="field"><label>إلى تاريخ</label><input class="control filter" id="q_to" type="date"></div><div class="field"><label>بحث عام</label><input class="control filter" id="q_text"></div></div><div class="actions"><button class="btn btn-secondary" onclick="clearFilters('${type}')">مسح الفلاتر</button></div></div><div class="card"><div class="card-title"><h3>النتائج</h3><span class="badge" id="resultCount">0</span></div><div id="queryResults"></div></div>`;enhanceAllSelects(page);page.querySelectorAll(".filter").forEach(x=>x.addEventListener("input",()=>apply(type)));apply(type)}
+function renderQuery(type){
+  const isC=type==="customer";
+  const page=$(isC?"customerQuery":"supplierQuery");
+  const list=isC?state.customers:state.suppliers;
+  const executed=queryUiState[type].executed;
+
+  page.innerHTML=`
+    <div class="page-head">
+      <div>
+        <h2>استعلامات ${isC?"العملاء":"الموردين"}</h2>
+        <p>حدد معايير البحث ثم اضغط استعلام.</p>
+      </div>
+      ${executed?`<button class="btn btn-primary" onclick="exportFiltered('${type}')">تنزيل النتائج CSV</button>`:""}
+    </div>
+
+    <div class="card">
+      <div class="filters-bar">
+        <div class="field">
+          <label>${isC?"العميل":"المورد"}</label>
+          <select class="control filter" id="q_entity">
+            <option value="">الكل</option>
+            ${list.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <label>نوع المرفق</label>
+          <select class="control filter" id="q_type">
+            <option value="">الكل</option>
+            ${state.attachmentTypes.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}
+          </select>
+        </div>
+        <div class="field"><label>من تاريخ</label><input class="control filter" id="q_from" type="date"></div>
+        <div class="field"><label>إلى تاريخ</label><input class="control filter" id="q_to" type="date"></div>
+        <div class="field"><label>بحث عام</label><input class="control filter" id="q_text" placeholder="اسم أو ملاحظة أو مستخدم"></div>
+      </div>
+
+      <div class="query-action-row">
+        <button class="btn btn-primary" onclick="runQuery('${type}')">استعلام</button>
+        <button class="btn btn-secondary" onclick="clearFilters('${type}')">مسح الفلاتر</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <h3>النتائج</h3>
+        ${executed?`<span class="badge" id="resultCount">0</span>`:""}
+      </div>
+      <div id="queryResults">
+        ${executed
+          ? ""
+          : `<div class="query-placeholder">
+               <div class="query-icon">⌕</div>
+               <strong>لم يتم تنفيذ استعلام بعد</strong>
+               <span>حدد الفلاتر المناسبة ثم اضغط زر استعلام لعرض النتائج.</span>
+             </div>`
+        }
+      </div>
+    </div>`;
+
+  enhanceAllSelects(page);
+
+  if(executed) apply(type);
+}
+
+window.runQuery=type=>{
+  queryUiState[type].executed=true;
+  const rows=filtered(type);
+  const count=$("resultCount");
+  const results=$("queryResults");
+
+  if(count) count.textContent=rows.length;
+  if(results) results.innerHTML=rows.length
+    ? table(rows)
+    : '<div class="empty">لا توجد نتائج مطابقة.</div>';
+
+  const exportBtn=document.querySelector(
+    `#${type==="customer"?"customerQuery":"supplierQuery"} .page-head .btn-primary`
+  );
+  if(!exportBtn){
+    const head=document.querySelector(
+      `#${type==="customer"?"customerQuery":"supplierQuery"} .page-head`
+    );
+    if(head){
+      const btn=document.createElement("button");
+      btn.className="btn btn-primary";
+      btn.textContent="تنزيل النتائج CSV";
+      btn.onclick=()=>exportFiltered(type);
+      head.appendChild(btn);
+    }
+  }
+};
+
 function filtered(type){const entity=$("q_entity")?.value||"",at=$("q_type")?.value||"",from=$("q_from")?.value||"",to=$("q_to")?.value||"",text=($("q_text")?.value||"").toLowerCase();return state.records.filter(r=>r.entityType===type).filter(r=>!entity||r.entityId===entity).filter(r=>!at||r.attachmentTypeId===at).filter(r=>!from||r.date>=from).filter(r=>!to||r.date<=to).filter(r=>!text||[r.entityName,r.attachmentType,r.notes,r.uploadedBy].join(" ").toLowerCase().includes(text)).sort((a,b)=>(b.date||"").localeCompare(a.date||""))}
-function apply(type){const rows=filtered(type);$("resultCount").textContent=rows.length;$("queryResults").innerHTML=rows.length?table(rows):'<div class="empty">لا توجد نتائج مطابقة.</div>'}
+function apply(type){
+  if(!queryUiState[type].executed)return;
+  const rows=filtered(type);
+  const count=$("resultCount");
+  const results=$("queryResults");
+  if(count)count.textContent=rows.length;
+  if(results)results.innerHTML=rows.length?table(rows):'<div class="empty">لا توجد نتائج مطابقة.</div>';
+}
 window.clearFilters=type=>{["q_entity","q_type","q_from","q_to","q_text"].forEach(id=>{const e=$(id);if(e)e.value=""});apply(type)};
-window.exportFiltered=type=>{const rows=filtered(type);if(!rows.length)return toast("لا توجد نتائج.");const csv=[["النوع","الاسم","نوع المرفق","التاريخ","القيمة","الملاحظات","المستخدم"],...rows.map(r=>[r.entityType==="customer"?"عميل":"مورد",r.entityName,r.attachmentType,r.date,r.value||"",r.notes||"",r.uploadedBy])].map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");download(`archive_${type}_${today()}.csv`,"\ufeff"+csv,"text/csv;charset=utf-8")};
+window.exportFiltered=type=>{if(!queryUiState[type].executed)return toast("نفّذ الاستعلام أولاً.");const rows=filtered(type);if(!rows.length)return toast("لا توجد نتائج.");const csv=[["النوع","الاسم","نوع المرفق","التاريخ","القيمة","الملاحظات","المستخدم"],...rows.map(r=>[r.entityType==="customer"?"عميل":"مورد",r.entityName,r.attachmentType,r.date,r.value||"",r.notes||"",r.uploadedBy])].map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");download(`archive_${type}_${today()}.csv`,"\ufeff"+csv,"text/csv;charset=utf-8")};
 function renderBackup(){$("backup").innerHTML=`<div class="page-head"><div><h2>النسخة الاحتياطية</h2><p>نزّل نسخة من جميع البيانات والصور.</p></div></div><div class="card"><div class="card-title"><h3>تنزيل نسخة احتياطية</h3></div><p style="color:var(--muted)">احتفظ بنسخة دورية من بيانات النظام.</p><button class="btn btn-primary" onclick="exportBackup()">تنزيل النسخة</button></div>`}
 window.exportBackup=()=>download(`khalaf_paper_backup_${today()}.json`,JSON.stringify({version:2,exportedAt:new Date().toISOString(),customers:state.customers,suppliers:state.suppliers,attachmentTypes:state.attachmentTypes,records:state.records},null,2));
