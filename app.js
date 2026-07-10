@@ -32,6 +32,126 @@ const listUiState = {
 
 
 const $ = id => document.getElementById(id);
+
+function closeAllSmartSelects(except=null){
+  document.querySelectorAll(".smart-select.open").forEach(w=>{
+    if(w!==except) w.classList.remove("open");
+  });
+}
+
+function enhanceSelect(select){
+  if(!select || select.dataset.enhanced==="1") return;
+  select.dataset.enhanced="1";
+  select.classList.add("smart-select-native");
+
+  const wrapper=document.createElement("div");
+  wrapper.className="smart-select";
+
+  const trigger=document.createElement("button");
+  trigger.type="button";
+  trigger.className="smart-select-trigger";
+
+  const valueSpan=document.createElement("span");
+  valueSpan.className="smart-select-value";
+
+  const menu=document.createElement("div");
+  menu.className="smart-select-menu";
+
+  const backdrop=document.createElement("div");
+  backdrop.className="smart-select-backdrop";
+
+  const searchBox=document.createElement("div");
+  searchBox.className="smart-select-search";
+  searchBox.innerHTML=`<div class="smart-select-search-wrap"><input type="text" placeholder="اكتب للبحث..."></div>`;
+
+  const optionsBox=document.createElement("div");
+  optionsBox.className="smart-select-options";
+
+  select.parentNode.insertBefore(wrapper,select);
+  wrapper.appendChild(select);
+  wrapper.appendChild(trigger);
+  wrapper.appendChild(backdrop);
+  wrapper.appendChild(menu);
+  menu.appendChild(searchBox);
+  menu.appendChild(optionsBox);
+  trigger.appendChild(valueSpan);
+
+  const searchInput=searchBox.querySelector("input");
+
+  function syncLabel(){
+    const option=select.options[select.selectedIndex];
+    const label=option?.textContent?.trim()||"اختر...";
+    valueSpan.textContent=label;
+    valueSpan.classList.toggle("placeholder",!select.value);
+  }
+
+  function renderOptions(filter=""){
+    const q=filter.trim().toLowerCase();
+    const opts=[...select.options].filter(o=>{
+      if(!o.value) return false;
+      return !q || o.textContent.toLowerCase().includes(q);
+    });
+
+    optionsBox.innerHTML=opts.length
+      ? opts.map(o=>`
+          <button type="button"
+                  class="smart-select-option ${o.value===select.value?"selected":""}"
+                  data-value="${esc(o.value)}">
+            <span>${esc(o.textContent)}</span>
+          </button>`).join("")
+      : `<div class="smart-select-empty">لا توجد نتائج مطابقة.</div>`;
+
+    optionsBox.querySelectorAll(".smart-select-option").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        select.value=btn.dataset.value;
+        select.dispatchEvent(new Event("change",{bubbles:true}));
+        syncLabel();
+        wrapper.classList.remove("open");
+        searchInput.value="";
+        renderOptions("");
+      });
+    });
+  }
+
+  function openMenu(){
+    closeAllSmartSelects(wrapper);
+    wrapper.classList.add("open");
+    searchInput.value="";
+    renderOptions("");
+    setTimeout(()=>searchInput.focus(),30);
+  }
+
+  trigger.addEventListener("click",()=>{
+    wrapper.classList.contains("open")
+      ? wrapper.classList.remove("open")
+      : openMenu();
+  });
+
+  backdrop.addEventListener("click",()=>wrapper.classList.remove("open"));
+
+  searchInput.addEventListener("input",()=>renderOptions(searchInput.value));
+
+  searchInput.addEventListener("keydown",e=>{
+    if(e.key==="Escape") wrapper.classList.remove("open");
+  });
+
+  select.addEventListener("change",()=>{
+    syncLabel();
+    renderOptions(searchInput.value);
+  });
+
+  syncLabel();
+  renderOptions("");
+}
+
+function enhanceAllSelects(root=document){
+  root.querySelectorAll("select.control").forEach(enhanceSelect);
+}
+
+document.addEventListener("click",e=>{
+  if(!e.target.closest(".smart-select")) closeAllSmartSelects();
+});
+
 function esc(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));}
 function today(){return new Date().toISOString().slice(0,10)}
 function fmtDate(d){return d?new Date(d+"T00:00:00").toLocaleDateString("ar-EG"):"—"}
@@ -76,7 +196,7 @@ function subscribeAll(){cleanup();
   state.unsub.push(onSnapshot(collection(db,"attachmentTypes"),s=>{state.attachmentTypes=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||"").localeCompare(b.name||"","ar"));renderAll()},e=>toast(errMsg(e))));
   state.unsub.push(onSnapshot(collection(db,"records"),s=>{state.records=s.docs.map(d=>{const x=d.data();return{id:d.id,...x,createdAt:ts(x.createdAt),updatedAt:ts(x.updatedAt)}}).sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));renderAll()},e=>toast(errMsg(e))));
 }
-function startApp(){$("loginPage").classList.add("hidden");$("appPage").classList.remove("hidden");$("currentUser").textContent=state.currentUser;$("avatar").textContent=state.currentUser[0];renderAll();goPage("dashboard")}
+function startApp(){$("loginPage").classList.add("hidden");$("appPage").classList.remove("hidden");$("currentUser").textContent=state.currentUser;$("avatar").textContent=state.currentUser[0];renderAll();goPage("dashboard");enhanceAllSelects()}
 document.querySelectorAll("[data-page]").forEach(b=>b.addEventListener("click",()=>goPage(b.dataset.page)));
 function goPage(page){document.querySelectorAll(".page-section").forEach(s=>s.classList.add("hidden"));$(page)?.classList.remove("hidden");document.querySelectorAll("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));window.scrollTo({top:0,behavior:"smooth"});if(page==="customerQuery")renderQuery("customer");if(page==="supplierQuery")renderQuery("supplier")}
 function renderAll(){if($("appPage").classList.contains("hidden"))return;renderDashboard();renderLists();if(!$("customerEntry").dataset.editing)renderEntry("customer");if(!$("supplierEntry").dataset.editing)renderEntry("supplier");renderBackup();if(!$("customerQuery").classList.contains("hidden"))renderQuery("customer");if(!$("supplierQuery").classList.contains("hidden"))renderQuery("supplier")}
@@ -258,7 +378,8 @@ window.deleteListItem=async(key,id)=>{
 
 function opts(arr,selected=""){return '<option value="">اختر...</option>'+arr.map(x=>`<option value="${x.id}" ${x.id===selected?"selected":""}>${esc(x.name)}</option>`).join("")}
 
-function renderEntry(type,record=null){const isC=type==="customer",target=$(isC?"customerEntry":"supplierEntry"),list=isC?state.customers:state.suppliers,title=isC?"العميل":"المورد",r=record||{};if(record)target.dataset.editing="1";else delete target.dataset.editing;state.selectedImage=r.imageData||"";target.innerHTML=`<div class="page-head"><div><h2>${record?"تعديل":"إضافة"} مرفق ${title}</h2><p>سجّل البيانات وارفع صورة من الهاتف أو الكمبيوتر.</p></div><button class="btn btn-secondary" onclick="openPrevious('${type}')">السابق</button></div><div class="card"><form id="${type}Form"><div class="grid grid-3"><div class="field"><label>${title}</label><select class="control" id="${type}_entity" required>${opts(list,r.entityId)}</select></div><div class="field"><label>نوع المرفق</label><select class="control" id="${type}_attachment" required>${opts(state.attachmentTypes,r.attachmentTypeId)}</select></div><div class="field"><label>التاريخ</label><input class="control" type="date" id="${type}_date" value="${r.date||today()}" required></div><div class="field"><label>القيمة <small style="color:#8a94a3">(اختياري)</small></label><input class="control" type="number" min="0" step="0.01" id="${type}_value" value="${r.value??""}"></div><div class="field full"><label>ملاحظات <small style="color:#8a94a3">(اختياري)</small></label><textarea class="control" id="${type}_notes">${esc(r.notes||"")}</textarea></div><div class="field full"><label>صورة المرفق</label><label class="upload"><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" id="${type}_image"><div style="font-size:29px">📷</div><strong>اضغط للتصوير أو اختيار صورة</strong><div class="preview" id="${type}_preview" style="${state.selectedImage?"display:block":""}">${state.selectedImage?`<img src="${state.selectedImage}">`:""}</div></label></div></div><div class="actions"><button class="btn btn-primary" id="${type}_save" type="submit">${record?"حفظ التعديلات":"حفظ المرفق"}</button>${record?`<button class="btn btn-secondary" type="button" onclick="cancelEdit('${type}')">إلغاء</button>`:""}</div></form></div><div class="section-note">تأكد من وضوح صورة المرفق قبل الحفظ.</div>`;
+function renderEntry(type,record=null){const isC=type==="customer",target=$(isC?"customerEntry":"supplierEntry"),list=isC?state.customers:state.suppliers,title=isC?"العميل":"المورد",r=record||{};if(record)target.dataset.editing="1";else delete target.dataset.editing;state.selectedImage=r.imageData||"";target.innerHTML=`<div class="page-head"><div><h2>${record?"تعديل":"إضافة"} مرفق ${title}</h2><p>سجّل البيانات وارفع صورة من الهاتف أو الكمبيوتر.</p></div><button class="btn btn-secondary" onclick="openPrevious('${type}')">السابق</button></div><div class="card"><form id="${type}Form"><div class="grid grid-3"><div class="field"><label>${title}</label><select class="control" id="${type}_entity" required>${opts(list,r.entityId)}</select></div><div class="field"><label>نوع المرفق</label><select class="control" id="${type}_attachment" required>${opts(state.attachmentTypes,r.attachmentTypeId)}</select></div><div class="field"><label>التاريخ</label><input class="control" type="date" id="${type}_date" value="${r.date||today()}" required></div><div class="field"><label>القيمة <small style="color:#8a94a3">(اختياري)</small></label><input class="control" type="number" min="0" step="0.01" id="${type}_value" value="${r.value??""}"></div><div class="field full"><label>ملاحظات <small style="color:#8a94a3">(اختياري)</small></label><textarea class="control" id="${type}_notes">${esc(r.notes||"")}</textarea></div><div class="field full"><label>صورة المرفق</label><label class="upload"><input type="file" accept="image/jpeg,image/png,image/webp" id="${type}_image"><div style="font-size:29px">📷</div><strong>اضغط للتصوير أو اختيار صورة</strong><div class="preview" id="${type}_preview" style="${state.selectedImage?"display:block":""}">${state.selectedImage?`<img src="${state.selectedImage}">`:""}</div></label></div></div><div class="actions"><button class="btn btn-primary" id="${type}_save" type="submit">${record?"حفظ التعديلات":"حفظ المرفق"}</button>${record?`<button class="btn btn-secondary" type="button" onclick="cancelEdit('${type}')">إلغاء</button>`:""}</div></form></div><div class="section-note">تأكد من وضوح صورة المرفق قبل الحفظ.</div>`;
+  enhanceAllSelects(target);
   $(type+"_image").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;try{toast("جاري تجهيز الصورة...");state.selectedImage=await compress(f);const p=$(type+"_preview");p.style.display="block";p.innerHTML=`<img src="${state.selectedImage}">`;toast("تم تجهيز الصورة.")}catch(x){toast(x.message)}});
   $(type+"Form").addEventListener("submit",async e=>{e.preventDefault();const entityId=$(type+"_entity").value,attachmentTypeId=$(type+"_attachment").value,entity=list.find(x=>x.id===entityId),at=state.attachmentTypes.find(x=>x.id===attachmentTypeId);if(!entity||!at)return toast("أكمل البيانات المطلوبة.");const btn=$(type+"_save");btn.disabled=true;btn.textContent="جاري الحفظ...";const payload={entityType:type,entityId,entityName:entity.name,attachmentTypeId,attachmentType:at.name,date:$(type+"_date").value,value:$(type+"_value").value,notes:$(type+"_notes").value.trim(),imageData:state.selectedImage||"",uploadedBy:record?.uploadedBy||state.currentUser,uploadedByEmail:record?.uploadedByEmail||state.currentEmail,updatedBy:state.currentUser,updatedAt:serverTimestamp()};try{if(record)await updateDoc(doc(db,"records",record.id),payload);else{payload.createdAt=serverTimestamp();await addDoc(collection(db,"records"),payload)}target.removeAttribute("data-editing");state.selectedImage="";renderEntry(type);toast(record?"تم حفظ التعديلات.":"تم حفظ المرفق.")}catch(x){toast(errMsg(x));btn.disabled=false;btn.textContent=record?"حفظ التعديلات":"حفظ المرفق"}})
 }
@@ -274,7 +395,7 @@ window.editRecord=id=>{const r=state.records.find(x=>x.id===id);if(!r)return;clo
 window.deleteRecord=async id=>{if(!confirm("هل تريد حذف هذا المرفق نهائياً؟"))return;try{await deleteDoc(doc(db,"records",id));closeModal();toast("تم الحذف.")}catch(e){toast(errMsg(e))}};
 window.downloadImage=id=>{const r=state.records.find(x=>x.id===id);if(!r?.imageData)return;const a=document.createElement("a");a.href=r.imageData;a.download=`${r.entityName}_${r.attachmentType}_${r.date}.jpg`;document.body.appendChild(a);a.click();a.remove()};
 
-function renderQuery(type){const isC=type==="customer",page=$(isC?"customerQuery":"supplierQuery"),list=isC?state.customers:state.suppliers;page.innerHTML=`<div class="page-head"><div><h2>استعلامات ${isC?"العملاء":"الموردين"}</h2><p>ابحث وفلتر وعدّل أو نزّل أي مرفق.</p></div><button class="btn btn-primary" onclick="exportFiltered('${type}')">تنزيل النتائج CSV</button></div><div class="card"><div class="filters-bar"><div class="field"><label>${isC?"العميل":"المورد"}</label><select class="control filter" id="q_entity"><option value="">الكل</option>${list.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><div class="field"><label>نوع المرفق</label><select class="control filter" id="q_type"><option value="">الكل</option>${state.attachmentTypes.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><div class="field"><label>من تاريخ</label><input class="control filter" id="q_from" type="date"></div><div class="field"><label>إلى تاريخ</label><input class="control filter" id="q_to" type="date"></div><div class="field"><label>بحث عام</label><input class="control filter" id="q_text"></div></div><div class="actions"><button class="btn btn-secondary" onclick="clearFilters('${type}')">مسح الفلاتر</button></div></div><div class="card"><div class="card-title"><h3>النتائج</h3><span class="badge" id="resultCount">0</span></div><div id="queryResults"></div></div>`;page.querySelectorAll(".filter").forEach(x=>x.addEventListener("input",()=>apply(type)));apply(type)}
+function renderQuery(type){const isC=type==="customer",page=$(isC?"customerQuery":"supplierQuery"),list=isC?state.customers:state.suppliers;page.innerHTML=`<div class="page-head"><div><h2>استعلامات ${isC?"العملاء":"الموردين"}</h2><p>ابحث وفلتر وعدّل أو نزّل أي مرفق.</p></div><button class="btn btn-primary" onclick="exportFiltered('${type}')">تنزيل النتائج CSV</button></div><div class="card"><div class="filters-bar"><div class="field"><label>${isC?"العميل":"المورد"}</label><select class="control filter" id="q_entity"><option value="">الكل</option>${list.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><div class="field"><label>نوع المرفق</label><select class="control filter" id="q_type"><option value="">الكل</option>${state.attachmentTypes.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select></div><div class="field"><label>من تاريخ</label><input class="control filter" id="q_from" type="date"></div><div class="field"><label>إلى تاريخ</label><input class="control filter" id="q_to" type="date"></div><div class="field"><label>بحث عام</label><input class="control filter" id="q_text"></div></div><div class="actions"><button class="btn btn-secondary" onclick="clearFilters('${type}')">مسح الفلاتر</button></div></div><div class="card"><div class="card-title"><h3>النتائج</h3><span class="badge" id="resultCount">0</span></div><div id="queryResults"></div></div>`;enhanceAllSelects(page);page.querySelectorAll(".filter").forEach(x=>x.addEventListener("input",()=>apply(type)));apply(type)}
 function filtered(type){const entity=$("q_entity")?.value||"",at=$("q_type")?.value||"",from=$("q_from")?.value||"",to=$("q_to")?.value||"",text=($("q_text")?.value||"").toLowerCase();return state.records.filter(r=>r.entityType===type).filter(r=>!entity||r.entityId===entity).filter(r=>!at||r.attachmentTypeId===at).filter(r=>!from||r.date>=from).filter(r=>!to||r.date<=to).filter(r=>!text||[r.entityName,r.attachmentType,r.notes,r.uploadedBy].join(" ").toLowerCase().includes(text)).sort((a,b)=>(b.date||"").localeCompare(a.date||""))}
 function apply(type){const rows=filtered(type);$("resultCount").textContent=rows.length;$("queryResults").innerHTML=rows.length?table(rows):'<div class="empty">لا توجد نتائج مطابقة.</div>'}
 window.clearFilters=type=>{["q_entity","q_type","q_from","q_to","q_text"].forEach(id=>{const e=$(id);if(e)e.value=""});apply(type)};
