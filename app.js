@@ -193,7 +193,20 @@ document.addEventListener("click",e=>{
 function esc(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));}
 function today(){return new Date().toISOString().slice(0,10)}
 function fmtDate(d){return d?new Date(d+"T00:00:00").toLocaleDateString("ar-EG"):"—"}
-function ts(v){if(!v)return new Date().toISOString();if(typeof v==="string")return v;if(v.toDate)return v.toDate().toISOString();return new Date().toISOString()}
+function fmtDateTime(v){
+  if(!v)return "—";
+  const d=new Date(ts(v));
+  if(Number.isNaN(d.getTime()))return "—";
+  return d.toLocaleString("ar-EG",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+}
+function registrationDateKey(v){
+  if(!v)return "";
+  const d=new Date(ts(v));
+  if(Number.isNaN(d.getTime()))return "";
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+function ts(v){if(!v)return "";if(typeof v==="string")return v;if(v.toDate)return v.toDate().toISOString();if(typeof v.seconds==="number")return new Date(v.seconds*1000).toISOString();return "";}
 
 function createdTime(value){
   if(!value) return Number.MAX_SAFE_INTEGER;
@@ -441,7 +454,7 @@ async function compress(file){if(!file.type.startsWith("image/"))throw new Error
 window.cancelEdit=type=>{const t=$(type==="customer"?"customerEntry":"supplierEntry");t.removeAttribute("data-editing");state.selectedImage="";renderEntry(type)};
 window.openPrevious=type=>{const rows=state.records.filter(r=>r.entityType===type);$("archiveTitle").textContent=type==="customer"?"السابق — مرفقات العملاء":"السابق — مرفقات الموردين";$("archiveContent").innerHTML=rows.length?table(rows):'<div class="empty">لا توجد بيانات سابقة.</div>';$("archiveModal").classList.add("show")};
 window.closeModal=()=>$("archiveModal").classList.remove("show");
-function table(rows){return `<div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>النوع</th><th>التاريخ</th><th>القيمة</th><th>المستخدم</th><th>ملاحظات</th><th>إجراءات</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.imageData?`<button style="border:0;background:none" onclick="viewImage('${r.id}')"><img class="thumb" src="${r.imageData}"></button>`:'<div class="thumb" style="display:grid;place-items:center">—</div>'}</td><td><strong>${esc(r.entityName)}</strong></td><td><span class="badge">${esc(r.attachmentType)}</span></td><td>${fmtDate(r.date)}</td><td>${r.value!==""&&r.value!=null?Number(r.value).toLocaleString("ar-EG"):"—"}</td><td>${esc(r.uploadedBy||"—")}</td><td>${esc(r.notes||"—")}</td><td><div class="mini-actions">${r.imageData?`<button class="btn-success" onclick="downloadImage('${r.id}')">تنزيل</button>`:""}<button class="btn-gold" onclick="editRecord('${r.id}')">تعديل</button><button class="btn-danger" onclick="deleteRecord('${r.id}')">حذف</button></div></td></tr>`).join("")}</tbody></table></div>`}
+function table(rows){return `<div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>النوع</th><th>تاريخ المرفق</th><th>تاريخ ووقت التسجيل</th><th>القيمة</th><th>المستخدم المسجل</th><th>ملاحظات</th><th>إجراءات</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.imageData?`<button style="border:0;background:none" onclick="viewImage('${r.id}')"><img class="thumb" src="${r.imageData}"></button>`:'<div class="thumb" style="display:grid;place-items:center">—</div>'}</td><td><strong>${esc(r.entityName)}</strong></td><td><span class="badge">${esc(r.attachmentType)}</span></td><td>${fmtDate(r.date)}</td><td><span class="registration-datetime">${fmtDateTime(r.createdAt)}</span></td><td>${r.value!==""&&r.value!=null?Number(r.value).toLocaleString("ar-EG"):"—"}</td><td><strong>${esc(r.uploadedBy||r.createdBy||"—")}</strong></td><td>${esc(r.notes||"—")}</td><td><div class="mini-actions">${r.imageData?`<button class="btn-success" onclick="downloadImage('${r.id}')">تنزيل</button>`:""}<button class="btn-gold" onclick="editRecord('${r.id}')">تعديل</button><button class="btn-danger" onclick="deleteRecord('${r.id}')">حذف</button></div></td></tr>`).join("")}</tbody></table></div>`}
 window.viewImage=id=>{const r=state.records.find(x=>x.id===id);if(!r?.imageData)return;const w=window.open();if(!w)return toast("اسمح بفتح النوافذ المنبثقة.");w.document.write(`<style>body{margin:0;background:#111;display:grid;place-items:center;min-height:100vh}img{max-width:100%;max-height:100vh}</style><img src="${r.imageData}">`);w.document.close()};
 window.editRecord=id=>{const r=state.records.find(x=>x.id===id);if(!r)return;closeModal();renderEntry(r.entityType,r);goPage(r.entityType==="customer"?"customerEntry":"supplierEntry")};
 window.deleteRecord=async id=>{if(!confirm("هل تريد حذف هذا المرفق نهائياً؟"))return;try{await deleteDoc(doc(db,"records",id));closeModal();toast("تم الحذف.")}catch(e){toast(errMsg(e))}};
@@ -478,8 +491,10 @@ function renderQuery(type){
             ${state.attachmentTypes.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}
           </select>
         </div>
-        <div class="field"><label>من تاريخ</label><input class="control filter" id="q_from" type="date"></div>
-        <div class="field"><label>إلى تاريخ</label><input class="control filter" id="q_to" type="date"></div>
+        <div class="field"><label>من تاريخ المرفق</label><input class="control filter" id="q_from" type="date"></div>
+        <div class="field"><label>إلى تاريخ المرفق</label><input class="control filter" id="q_to" type="date"></div>
+        <div class="field"><label>تسجيل من تاريخ</label><input class="control filter" id="q_created_from" type="date"></div>
+        <div class="field"><label>تسجيل إلى تاريخ</label><input class="control filter" id="q_created_to" type="date"></div>
         <div class="field"><label>بحث عام</label><input class="control filter" id="q_text" placeholder="اسم أو ملاحظة أو مستخدم"></div>
       </div>
 
@@ -539,7 +554,19 @@ window.runQuery=type=>{
   }
 };
 
-function filtered(type){const entity=$("q_entity")?.value||"",at=$("q_type")?.value||"",from=$("q_from")?.value||"",to=$("q_to")?.value||"",text=($("q_text")?.value||"").toLowerCase();return state.records.filter(r=>r.entityType===type).filter(r=>!entity||r.entityId===entity).filter(r=>!at||r.attachmentTypeId===at).filter(r=>!from||r.date>=from).filter(r=>!to||r.date<=to).filter(r=>!text||[r.entityName,r.attachmentType,r.notes,r.uploadedBy].join(" ").toLowerCase().includes(text)).sort((a,b)=>(b.date||"").localeCompare(a.date||""))}
+function filtered(type){
+  const entity=$("q_entity")?.value||"",at=$("q_type")?.value||"",from=$("q_from")?.value||"",to=$("q_to")?.value||"",createdFrom=$("q_created_from")?.value||"",createdTo=$("q_created_to")?.value||"",text=($("q_text")?.value||"").toLowerCase();
+  return state.records
+    .filter(r=>r.entityType===type)
+    .filter(r=>!entity||r.entityId===entity)
+    .filter(r=>!at||r.attachmentTypeId===at)
+    .filter(r=>!from||r.date>=from)
+    .filter(r=>!to||r.date<=to)
+    .filter(r=>{const d=registrationDateKey(r.createdAt);return !createdFrom||(d&&d>=createdFrom)})
+    .filter(r=>{const d=registrationDateKey(r.createdAt);return !createdTo||(d&&d<=createdTo)})
+    .filter(r=>!text||[r.entityName,r.attachmentType,r.notes,r.uploadedBy,r.uploadedByEmail].join(" ").toLowerCase().includes(text))
+    .sort((a,b)=>createdTime(b.createdAt)-createdTime(a.createdAt));
+}
 function apply(type){
   if(!queryUiState[type].executed)return;
   const rows=filtered(type);
@@ -548,7 +575,7 @@ function apply(type){
   if(count)count.textContent=rows.length;
   if(results)results.innerHTML=rows.length?table(rows):'<div class="empty">لا توجد نتائج مطابقة.</div>';
 }
-window.clearFilters=type=>{["q_entity","q_type","q_from","q_to","q_text"].forEach(id=>{const e=$(id);if(e)e.value=""});apply(type)};
-window.exportFiltered=type=>{if(!queryUiState[type].executed)return toast("نفّذ الاستعلام أولاً.");const rows=filtered(type);if(!rows.length)return toast("لا توجد نتائج.");const csv=[["النوع","الاسم","نوع المرفق","التاريخ","القيمة","الملاحظات","المستخدم"],...rows.map(r=>[r.entityType==="customer"?"عميل":"مورد",r.entityName,r.attachmentType,r.date,r.value||"",r.notes||"",r.uploadedBy])].map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");download(`archive_${type}_${today()}.csv`,"\ufeff"+csv,"text/csv;charset=utf-8")};
+window.clearFilters=type=>{["q_entity","q_type","q_from","q_to","q_created_from","q_created_to","q_text"].forEach(id=>{const e=$(id);if(e)e.value=""});apply(type)};
+window.exportFiltered=type=>{if(!queryUiState[type].executed)return toast("نفّذ الاستعلام أولاً.");const rows=filtered(type);if(!rows.length)return toast("لا توجد نتائج.");const csv=[["النوع","الاسم","نوع المرفق","تاريخ المرفق","تاريخ ووقت التسجيل","القيمة","الملاحظات","المستخدم المسجل","بريد المستخدم"],...rows.map(r=>[r.entityType==="customer"?"عميل":"مورد",r.entityName,r.attachmentType,r.date,fmtDateTime(r.createdAt),r.value||"",r.notes||"",r.uploadedBy||r.createdBy||"",r.uploadedByEmail||""])].map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");download(`archive_${type}_${today()}.csv`,"\ufeff"+csv,"text/csv;charset=utf-8")};
 function renderBackup(){$("backup").innerHTML=`<div class="page-head"><div><h2>النسخة الاحتياطية</h2><p>نزّل نسخة من جميع البيانات والصور.</p></div></div><div class="card"><div class="card-title"><h3>تنزيل نسخة احتياطية</h3></div><p style="color:var(--muted)">احتفظ بنسخة دورية من بيانات النظام.</p><button class="btn btn-primary" onclick="exportBackup()">تنزيل النسخة</button></div>`}
 window.exportBackup=()=>download(`khalaf_paper_backup_${today()}.json`,JSON.stringify({version:2,exportedAt:new Date().toISOString(),customers:state.customers,suppliers:state.suppliers,attachmentTypes:state.attachmentTypes,records:state.records},null,2));
