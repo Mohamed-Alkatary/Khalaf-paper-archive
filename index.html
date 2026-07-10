@@ -1044,6 +1044,119 @@ body.dark .smart-select-hint{
   }
 }
 
+
+/* ===== Smart select pagination ===== */
+.smart-select-pager{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  padding:8px 9px 10px;
+  border-top:1px solid var(--border);
+  background:#fafbfd;
+}
+.smart-select-page-btn{
+  min-width:29px;
+  height:29px;
+  padding:0 8px;
+  border:1px solid var(--border);
+  border-radius:9px;
+  background:#fff;
+  color:var(--primary);
+  display:grid;
+  place-items:center;
+  font-size:10px;
+  font-weight:700;
+  cursor:pointer;
+}
+.smart-select-page-btn:hover:not(:disabled){
+  border-color:var(--primary-2);
+  background:#eef3f8;
+}
+.smart-select-page-btn.active{
+  background:var(--primary);
+  border-color:var(--primary);
+  color:#fff;
+}
+.smart-select-page-btn:disabled{
+  opacity:.4;
+  cursor:not-allowed;
+}
+.smart-select-page-info{
+  color:var(--muted);
+  font-size:10px;
+  margin:0 3px;
+}
+body.dark .smart-select-pager{
+  background:#0f1a27;
+  border-color:#253447;
+}
+body.dark .smart-select-page-btn{
+  background:#111d2b;
+  color:#eef4fb;
+  border-color:#253447;
+}
+body.dark .smart-select-page-btn.active{
+  background:#d7a534;
+  color:#102a4c;
+  border-color:#d7a534;
+}
+@media(max-width:600px){
+  .smart-select-pager{padding:10px}
+  .smart-select-page-btn{min-width:34px;height:34px;font-size:12px}
+}
+
+
+/* ===== Signature ===== */
+.login-signature,
+.app-footer{
+  direction:ltr;
+  text-align:center;
+  font-family:"Segoe UI",Tahoma,Arial,sans-serif;
+}
+.login-signature{
+  color:#748094;
+  font-size:11px;
+  font-weight:600;
+}
+.signature-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:7px 12px;
+  border-radius:999px;
+  background:#edf3f8;
+  color:#536176;
+  border:1px solid #dfe7ef;
+  box-shadow:0 5px 15px rgba(16,42,76,.05);
+}
+.signature-pill strong{
+  color:var(--primary);
+  font-size:11px;
+}
+.signature-dot{
+  width:4px;height:4px;border-radius:50%;
+  background:var(--accent);
+}
+.app-footer{
+  margin:26px 0 12px;
+  color:#748094;
+  font-size:11px;
+}
+body.dark .signature-pill{
+  background:#182738;
+  color:#aab5c3;
+  border-color:#2b3d52;
+}
+body.dark .signature-pill strong{color:#fff}
+@media(max-width:600px){
+  .signature-pill{
+    padding:7px 10px;
+    gap:6px;
+    font-size:10px;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1084,7 +1197,12 @@ body.dark .smart-select-hint{
 
       <button class="btn btn-primary btn-block" type="submit">دخول</button>
 
-      <div class="login-signature">Mohamed_Reda_01124975452</div>
+      <div class="login-signature"><span class="signature-pill">
+  <span>Developed by</span>
+  <strong>Mohamed Reda</strong>
+  <span class="signature-dot"></span>
+  <span>01124975452</span>
+</span></div>
     </form>
   </div>
 </section>
@@ -1126,7 +1244,12 @@ body.dark .smart-select-hint{
       <section id="supplierEntry" class="page-section hidden"></section>
       <section id="supplierQuery" class="page-section hidden"></section>
       <section id="backup" class="page-section hidden"></section>
-      <div class="app-footer">Mohamed_Reda_01124975452</div>
+      <div class="app-footer"><span class="signature-pill">
+  <span>Developed by</span>
+  <strong>Mohamed Reda</strong>
+  <span class="signature-dot"></span>
+  <span>01124975452</span>
+</span></div>
     </main>
   </div>
 
