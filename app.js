@@ -16,7 +16,7 @@ const USER_EMAILS = {
   MO: "mo@khalaf.com",
   AHMED: "ahmed@khalaf.com",
   HUSSEIN: "hussein@khalaf.com",
-  USER1: "user@khalaf.com"
+  USER: "user@khalaf.com"
 };
 
 const configReady = !Object.values(firebaseConfig).some(v => String(v).includes("PUT_YOUR"));
