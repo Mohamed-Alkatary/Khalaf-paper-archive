@@ -343,7 +343,10 @@ function listCard(key,title,ph){
           ? pageItems.map(x=>`
               <div class="list-row">
                 <span class="item-name" title="${esc(x.name)}">${esc(x.name)}</span>
-                ${canManage()?`<button class="btn btn-danger" onclick="deleteListItem('${key}','${x.id}')">حذف</button>`:""}
+                ${canManage()?`<div class="mini-actions">
+                  <button class="btn-gold" onclick="editListItem('${key}','${x.id}')">تعديل</button>
+                  <button class="btn-danger" onclick="deleteListItem('${key}','${x.id}')">حذف</button>
+                </div>`:""}
               </div>
             `).join("")
           : `<div class="list-empty-state">
@@ -445,6 +448,55 @@ window.addListItem=async key=>{
     listUiState[key].page=1;
     toast("تمت الإضافة بنجاح.");
   }catch(e){toast(errMsg(e))}
+};
+
+window.editListItem=async(key,id)=>{
+  if(!canManage()) return denyManageAction();
+
+  const item=state[key]?.find(x=>x.id===id);
+  if(!item) return toast("تعذر العثور على العنصر.");
+
+  const newName=prompt("اكتب الاسم الجديد:",item.name||"");
+  if(newName===null) return;
+
+  const value=newName.trim();
+  if(!value) return toast("لا يمكن حفظ اسم فارغ.");
+  if(value===(item.name||"").trim()) return toast("لم يتم تغيير الاسم.");
+
+  const duplicate=state[key].some(x=>x.id!==id&&(x.name||"").trim().toLowerCase()===value.toLowerCase());
+  if(duplicate) return toast("هذا الاسم موجود بالفعل.");
+
+  const related=state.records.filter(r=>{
+    if(key==="customers") return r.entityType==="customer"&&r.entityId===id;
+    if(key==="suppliers") return r.entityType==="supplier"&&r.entityId===id;
+    if(key==="attachmentTypes") return r.attachmentTypeId===id;
+    return false;
+  });
+
+  try{
+    toast("جاري تعديل الاسم وتحديث المرفقات المرتبطة...");
+
+    await updateDoc(doc(db,key,id),{
+      name:value,
+      updatedBy:state.currentUser,
+      updatedAt:serverTimestamp()
+    });
+
+    const CHUNK_SIZE=20;
+    for(let i=0;i<related.length;i+=CHUNK_SIZE){
+      const chunk=related.slice(i,i+CHUNK_SIZE);
+      await Promise.all(chunk.map(r=>{
+        const payload={updatedBy:state.currentUser,updatedAt:serverTimestamp()};
+        if(key==="attachmentTypes") payload.attachmentType=value;
+        else payload.entityName=value;
+        return updateDoc(doc(db,"records",r.id),payload);
+      }));
+    }
+
+    toast(`تم تعديل الاسم وتحديث ${related.length.toLocaleString("ar-EG")} مرفق مرتبط بنجاح.`);
+  }catch(e){
+    toast(errMsg(e));
+  }
 };
 
 window.deleteListItem=async(key,id)=>{
