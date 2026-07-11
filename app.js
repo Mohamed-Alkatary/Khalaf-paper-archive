@@ -32,6 +32,12 @@ function canManage(){
 function denyManageAction(){
   toast("ليس لديك صلاحية للتعديل أو الحذف.");
 }
+function applyManageVisibility(){
+  const allowed=canManage();
+  document.querySelectorAll(".manage-only").forEach(el=>el.classList.toggle("hidden",!allowed));
+  const mobileNav=document.querySelector(".mobile-nav");
+  if(mobileNav)mobileNav.style.gridTemplateColumns=`repeat(${allowed?7:6}, minmax(0, 1fr))`;
+}
 
 const queryUiState = {
   customer: { executed: false },
@@ -269,9 +275,9 @@ function subscribeAll(){cleanup();
   state.unsub.push(onSnapshot(collection(db,"attachmentTypes"),s=>{state.attachmentTypes=s.docs.map(d=>({id:d.id,...d.data()})).sort(sortByCreatedAsc);renderAll()},e=>toast(errMsg(e))));
   state.unsub.push(onSnapshot(collection(db,"records"),s=>{state.records=s.docs.map(d=>{const x=d.data();return{id:d.id,...x,createdAt:ts(x.createdAt),updatedAt:ts(x.updatedAt)}}).sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));renderAll()},e=>toast(errMsg(e))));
 }
-function startApp(){$("loginPage").classList.add("hidden");$("appPage").classList.remove("hidden");$("currentUser").textContent=state.currentUser;$("avatar").textContent=state.currentUser[0];renderAll();goPage("dashboard");enhanceAllSelects()}
+function startApp(){$("loginPage").classList.add("hidden");$("appPage").classList.remove("hidden");$("currentUser").textContent=state.currentUser;$("avatar").textContent=state.currentUser[0];applyManageVisibility();renderAll();goPage("dashboard");enhanceAllSelects()}
 document.querySelectorAll("[data-page]").forEach(b=>b.addEventListener("click",()=>goPage(b.dataset.page)));
-function goPage(page){document.querySelectorAll(".page-section").forEach(s=>s.classList.add("hidden"));$(page)?.classList.remove("hidden");document.querySelectorAll("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));window.scrollTo({top:0,behavior:"smooth"});if(page==="customerQuery")renderQuery("customer");if(page==="supplierQuery")renderQuery("supplier")}
+function goPage(page){if(page==="backup"&&!canManage()){toast("شاشة النسخ الاحتياطي متاحة فقط للمستخدمين المصرح لهم.");page="dashboard"}document.querySelectorAll(".page-section").forEach(s=>s.classList.add("hidden"));$(page)?.classList.remove("hidden");document.querySelectorAll("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));window.scrollTo({top:0,behavior:"smooth"});if(page==="customerQuery")renderQuery("customer");if(page==="supplierQuery")renderQuery("supplier");if(page==="backup")renderBackup()}
 function renderAll(){if($("appPage").classList.contains("hidden"))return;renderDashboard();renderLists();if(!$("customerEntry").dataset.editing)renderEntry("customer");if(!$("supplierEntry").dataset.editing)renderEntry("supplier");renderBackup();if(!$("customerQuery").classList.contains("hidden"))renderQuery("customer");if(!$("supplierQuery").classList.contains("hidden"))renderQuery("supplier")}
 
 function renderDashboard(){const c=state.records.filter(r=>r.entityType==="customer").length,s=state.records.filter(r=>r.entityType==="supplier").length,total=state.records.reduce((a,r)=>a+(Number(r.value)||0),0),recent=state.records.slice(0,6);$("dashboard").innerHTML=`<div class="page-head"><div><h2>لوحة التحكم</h2><p>نظرة سريعة على أرشيف مخزن خلاف للورق.</p></div></div><div class="stats"><div class="stat"><span>مرفقات العملاء</span><strong>${c}</strong></div><div class="stat"><span>مرفقات الموردين</span><strong>${s}</strong></div><div class="stat"><span>إجمالي المرفقات</span><strong>${state.records.length}</strong></div><div class="stat"><span>إجمالي القيم</span><strong>${total.toLocaleString("ar-EG")}</strong></div></div><div class="card"><div class="card-title"><h3>أحدث المرفقات</h3></div>${recent.length?table(recent):'<div class="empty">لا توجد مرفقات مسجلة حتى الآن.</div>'}</div>`}
@@ -586,5 +592,185 @@ function apply(type){
 }
 window.clearFilters=type=>{["q_entity","q_type","q_from","q_to","q_created_from","q_created_to","q_text"].forEach(id=>{const e=$(id);if(e)e.value=""});apply(type)};
 window.exportFiltered=type=>{if(!queryUiState[type].executed)return toast("نفّذ الاستعلام أولاً.");const rows=filtered(type);if(!rows.length)return toast("لا توجد نتائج.");const csv=[["النوع","الاسم","نوع المرفق","تاريخ المرفق","تاريخ ووقت التسجيل","القيمة","الملاحظات","المستخدم المسجل","بريد المستخدم"],...rows.map(r=>[r.entityType==="customer"?"عميل":"مورد",r.entityName,r.attachmentType,r.date,fmtDateTime(r.createdAt),r.value||"",r.notes||"",r.uploadedBy||r.createdBy||"",r.uploadedByEmail||""])].map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");download(`archive_${type}_${today()}.csv`,"\ufeff"+csv,"text/csv;charset=utf-8")};
-function renderBackup(){$("backup").innerHTML=`<div class="page-head"><div><h2>النسخة الاحتياطية</h2><p>نزّل نسخة من جميع البيانات والصور.</p></div></div><div class="card"><div class="card-title"><h3>تنزيل نسخة احتياطية</h3></div><p style="color:var(--muted)">احتفظ بنسخة دورية من بيانات النظام.</p><button class="btn btn-primary" onclick="exportBackup()">تنزيل النسخة</button></div>`}
-window.exportBackup=()=>download(`khalaf_paper_backup_${today()}.json`,JSON.stringify({version:2,exportedAt:new Date().toISOString(),customers:state.customers,suppliers:state.suppliers,attachmentTypes:state.attachmentTypes,records:state.records},null,2));
+const backupUiState={scope:"all",from:"",to:"",running:false};
+
+function safeFileName(value,fallback="بدون اسم"){
+  const cleaned=String(value||fallback).replace(/[\\/:*?"<>|\u0000-\u001f]/g,"-").replace(/\s+/g," ").trim();
+  return (cleaned||fallback).slice(0,120);
+}
+function dataUrlInfo(dataUrl){
+  const match=String(dataUrl||"").match(/^data:([^;,]+)?(?:;[^,]*)?;base64,(.+)$/s);
+  if(!match)return null;
+  const mime=(match[1]||"application/octet-stream").toLowerCase();
+  const ext={"image/jpeg":"jpg","image/jpg":"jpg","image/png":"png","image/webp":"webp","application/pdf":"pdf"}[mime]||mime.split("/")[1]?.replace(/[^a-z0-9]/gi,"")||"bin";
+  return {mime,ext,base64:match[2]};
+}
+function csvCell(value){return `"${String(value??"").replace(/"/g,'""')}"`}
+function makeCsv(rows){return "\ufeff"+rows.map(row=>row.map(csvCell).join(",")).join("\r\n")}
+function backupDateStamp(){
+  const d=new Date(),p=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}`;
+}
+function backupFilteredRecords(){
+  return state.records.filter(r=>{
+    if(backupUiState.scope!=="all"&&r.entityType!==backupUiState.scope)return false;
+    const key=registrationDateKey(r.createdAt);
+    if(backupUiState.from&&(!key||key<backupUiState.from))return false;
+    if(backupUiState.to&&(!key||key>backupUiState.to))return false;
+    return true;
+  });
+}
+function estimateBackupBytes(rows){
+  return rows.reduce((sum,r)=>{
+    const info=dataUrlInfo(r.imageData);
+    return sum+(info?Math.floor(info.base64.length*0.75):0);
+  },0);
+}
+function humanBytes(bytes){
+  if(!bytes)return "0 MB";
+  const units=["B","KB","MB","GB"],i=Math.min(Math.floor(Math.log(bytes)/Math.log(1024)),3);
+  return `${(bytes/Math.pow(1024,i)).toFixed(i<2?0:2)} ${units[i]}`;
+}
+function backupStats(){
+  const rows=backupFilteredRecords();
+  return {
+    rows,
+    customers:new Set(rows.filter(r=>r.entityType==="customer").map(r=>r.entityId||r.entityName)).size,
+    suppliers:new Set(rows.filter(r=>r.entityType==="supplier").map(r=>r.entityId||r.entityName)).size,
+    bytes:estimateBackupBytes(rows)
+  };
+}
+function updateBackupStats(){
+  const s=backupStats();
+  if($("backupCustomers"))$("backupCustomers").textContent=s.customers.toLocaleString("ar-EG");
+  if($("backupSuppliers"))$("backupSuppliers").textContent=s.suppliers.toLocaleString("ar-EG");
+  if($("backupRecords"))$("backupRecords").textContent=s.rows.length.toLocaleString("ar-EG");
+  if($("backupSize"))$("backupSize").textContent=humanBytes(s.bytes);
+}
+function setBackupProgress(percent,text){
+  if($("backupProgressBar"))$("backupProgressBar").style.width=`${Math.max(0,Math.min(100,percent))}%`;
+  if($("backupProgressPercent"))$("backupProgressPercent").textContent=`${Math.round(percent)}%`;
+  if($("backupProgressLabel"))$("backupProgressLabel").textContent=text||"جاهز";
+}
+function renderBackup(){
+  const page=$("backup");
+  if(!page)return;
+  if(!canManage()){
+    page.innerHTML='<div class="empty">ليس لديك صلاحية لعرض شاشة النسخ الاحتياطي.</div>';
+    return;
+  }
+  page.innerHTML=`
+    <div class="page-head"><div><h2>النسخ الاحتياطي</h2><p>أنشئ ملف ZIP منظمًا يحتوي على مرفقات العملاء والموردين وملفات البيانات.</p></div></div>
+    <div class="backup-hero">
+      <div><h3>مركز النسخ الاحتياطي</h3><p>يتم تقسيم النسخة إلى مجلد للعملاء ومجلد للموردين، ثم مجلد مستقل لكل اسم، مع تسمية كل مرفق بنوعه وتاريخه.</p></div>
+      <div class="backup-lock"><div style="font-size:30px">🔒</div><strong>صلاحية إدارية</strong><span>متاح فقط للمستخدمين MO و AHMED</span></div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="card-title"><h3>محتوى النسخة</h3><span class="badge">ZIP</span></div>
+      <div class="backup-options">
+        <label class="backup-choice ${backupUiState.scope==="all"?"selected":""}" data-backup-scope="all"><input type="radio" name="backupScope" value="all" ${backupUiState.scope==="all"?"checked":""}><div class="backup-choice-icon">📦</div><strong>نسخة كاملة</strong><small>العملاء والموردون في ملف واحد.</small></label>
+        <label class="backup-choice ${backupUiState.scope==="customer"?"selected":""}" data-backup-scope="customer"><input type="radio" name="backupScope" value="customer" ${backupUiState.scope==="customer"?"checked":""}><div class="backup-choice-icon">👥</div><strong>العملاء فقط</strong><small>مجلدات العملاء ومرفقاتهم فقط.</small></label>
+        <label class="backup-choice ${backupUiState.scope==="supplier"?"selected":""}" data-backup-scope="supplier"><input type="radio" name="backupScope" value="supplier" ${backupUiState.scope==="supplier"?"checked":""}><div class="backup-choice-icon">🏢</div><strong>الموردون فقط</strong><small>مجلدات الموردين ومرفقاتهم فقط.</small></label>
+      </div>
+      <div class="grid" style="margin-top:16px">
+        <div class="field"><label>تاريخ التسجيل من</label><input class="control" id="backupFrom" type="date" value="${esc(backupUiState.from)}"></div>
+        <div class="field"><label>تاريخ التسجيل إلى</label><input class="control" id="backupTo" type="date" value="${esc(backupUiState.to)}"></div>
+      </div>
+      <div class="backup-stats">
+        <div class="backup-stat"><span>العملاء داخل النسخة</span><strong id="backupCustomers">0</strong></div>
+        <div class="backup-stat"><span>الموردون داخل النسخة</span><strong id="backupSuppliers">0</strong></div>
+        <div class="backup-stat"><span>إجمالي المرفقات</span><strong id="backupRecords">0</strong></div>
+        <div class="backup-stat"><span>الحجم التقريبي</span><strong id="backupSize">0 MB</strong></div>
+      </div>
+      <div class="backup-progress">
+        <div class="backup-progress-track"><div class="backup-progress-bar" id="backupProgressBar"></div></div>
+        <div class="backup-progress-text"><span id="backupProgressLabel">جاهز لإنشاء النسخة.</span><strong id="backupProgressPercent">0%</strong></div>
+      </div>
+      <div class="actions"><button class="btn btn-primary btn-block" id="createBackupBtn" onclick="exportBackup()">⬇ إنشاء وتنزيل النسخة الاحتياطية</button></div>
+    </div>
+    <div class="section-note">قد يحتاج تجهيز النسخة وقتًا على الموبايل إذا كان عدد الصور أو حجمها كبيرًا. لا تغلق الصفحة أثناء التجهيز.</div>`;
+
+  document.querySelectorAll("[data-backup-scope]").forEach(label=>label.addEventListener("click",()=>{
+    backupUiState.scope=label.dataset.backupScope;
+    document.querySelectorAll("[data-backup-scope]").forEach(x=>x.classList.toggle("selected",x===label));
+    updateBackupStats();
+  }));
+  $("backupFrom").addEventListener("change",e=>{backupUiState.from=e.target.value;updateBackupStats()});
+  $("backupTo").addEventListener("change",e=>{backupUiState.to=e.target.value;updateBackupStats()});
+  updateBackupStats();
+}
+
+window.exportBackup=async()=>{
+  if(!canManage())return toast("ليس لديك صلاحية لإنشاء نسخة احتياطية.");
+  if(backupUiState.running)return;
+  if(backupUiState.from&&backupUiState.to&&backupUiState.from>backupUiState.to)return toast("تاريخ البداية يجب أن يكون قبل تاريخ النهاية.");
+  if(!window.JSZip)return toast("تعذر تحميل أداة إنشاء الملف المضغوط. تحقق من الإنترنت ثم أعد المحاولة.");
+  const {rows}=backupStats();
+  if(!rows.length)return toast("لا توجد مرفقات مطابقة للاختيارات الحالية.");
+
+  backupUiState.running=true;
+  const btn=$("createBackupBtn");
+  if(btn){btn.disabled=true;btn.textContent="جاري تجهيز النسخة..."}
+  setBackupProgress(2,"جاري ترتيب البيانات...");
+
+  try{
+    const zip=new window.JSZip();
+    const globalRows=[["التصنيف","الاسم","نوع المرفق","تاريخ المرفق","القيمة","الملاحظات","المستخدم المسجل","بريد المستخدم","تاريخ ووقت التسجيل","اسم الملف"]];
+    const groups=new Map();
+    rows.forEach(r=>{
+      const key=`${r.entityType}|${r.entityId||r.entityName}`;
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(r);
+    });
+
+    let done=0;
+    for(const groupRows of groups.values()){
+      const first=groupRows[0];
+      const rootName=first.entityType==="customer"?"العملاء":"الموردين";
+      const entityName=safeFileName(first.entityName,first.entityType==="customer"?"عميل بدون اسم":"مورد بدون اسم");
+      const folder=zip.folder(rootName).folder(entityName);
+      const usedNames=new Map();
+      const entityCsv=[["الاسم","نوع المرفق","تاريخ المرفق","القيمة","الملاحظات","المستخدم المسجل","بريد المستخدم","تاريخ ووقت التسجيل","اسم الملف"]];
+
+      for(const r of groupRows.sort((a,b)=>createdTime(a.createdAt)-createdTime(b.createdAt))){
+        const info=dataUrlInfo(r.imageData);
+        let fileName="لا يوجد مرفق";
+        if(info){
+          const base=safeFileName(`${r.attachmentType||"مرفق"} - ${r.date||registrationDateKey(r.createdAt)||"بدون تاريخ"}`);
+          const count=(usedNames.get(base)||0)+1;
+          usedNames.set(base,count);
+          fileName=`${base}${count>1?` (${count})`:""}.${info.ext}`;
+          folder.file(fileName,info.base64,{base64:true});
+        }
+        const data=[r.entityName||"",r.attachmentType||"",r.date||"",r.value||"",r.notes||"",r.uploadedBy||r.createdBy||"",r.uploadedByEmail||"",fmtDateTime(r.createdAt),fileName];
+        entityCsv.push(data);
+        globalRows.push([first.entityType==="customer"?"عميل":"مورد",...data]);
+        done++;
+        setBackupProgress(5+(done/rows.length)*65,`تجهيز المرفقات: ${done} من ${rows.length}`);
+        if(done%20===0)await new Promise(resolve=>setTimeout(resolve,0));
+      }
+      folder.file(`بيانات ${first.entityType==="customer"?"العميل":"المورد"}.csv`,makeCsv(entityCsv));
+    }
+
+    if(rows.some(r=>r.entityType==="customer"))zip.folder("العملاء").file("جميع العملاء.csv",makeCsv([globalRows[0],...globalRows.slice(1).filter(r=>r[0]==="عميل")]));
+    if(rows.some(r=>r.entityType==="supplier"))zip.folder("الموردين").file("جميع الموردين.csv",makeCsv([globalRows[0],...globalRows.slice(1).filter(r=>r[0]==="مورد")]));
+    zip.file("ملخص النسخة.txt",`مخزن خلاف للورق\r\nتاريخ إنشاء النسخة: ${new Date().toLocaleString("ar-EG")}\r\nأنشأها المستخدم: ${state.currentUser}\r\nعدد المرفقات: ${rows.length}\r\nالفترة من: ${backupUiState.from||"بداية البيانات"}\r\nالفترة إلى: ${backupUiState.to||"نهاية البيانات"}`);
+
+    setBackupProgress(72,"جاري ضغط الملفات...");
+    const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}},meta=>setBackupProgress(72+meta.percent*.28,`جاري ضغط الملفات: ${Math.round(meta.percent)}%`));
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download=`Khalaf_Backup_${backupDateStamp()}.zip`;
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+    setBackupProgress(100,"تم إنشاء النسخة وتنزيلها بنجاح.");
+    toast("تم تنزيل النسخة الاحتياطية.");
+  }catch(e){
+    console.error(e);
+    setBackupProgress(0,"تعذر إنشاء النسخة.");
+    toast(e?.message||"حدث خطأ أثناء إنشاء النسخة الاحتياطية.");
+  }finally{
+    backupUiState.running=false;
+    if(btn){btn.disabled=false;btn.textContent="⬇ إنشاء وتنزيل النسخة الاحتياطية"}
+  }
+};
