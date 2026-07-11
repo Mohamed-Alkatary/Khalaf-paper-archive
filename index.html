@@ -1805,6 +1805,94 @@
     }
 
     /* =========================================================
+       BACKUP CENTER
+    ========================================================= */
+
+    .backup-hero {
+      padding: 22px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(260px, .6fr);
+      gap: 18px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background:
+        radial-gradient(circle at 10% 15%, rgba(215,165,52,.13), transparent 34%),
+        linear-gradient(135deg, #102a4c, #1d4a7a);
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .backup-hero h3 { margin: 0 0 9px; font-size: 22px; }
+    .backup-hero p { margin: 0; color: rgba(255,255,255,.74); font-size: 12px; line-height: 1.9; }
+
+    .backup-lock {
+      min-height: 120px;
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 8px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 16px;
+      background: rgba(255,255,255,.08);
+      text-align: center;
+    }
+
+    .backup-lock strong { font-size: 16px; }
+    .backup-lock span { color: rgba(255,255,255,.7); font-size: 11px; }
+
+    .backup-options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .backup-choice {
+      position: relative;
+      min-height: 116px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      background: var(--surface-2);
+      cursor: pointer;
+      transition: .18s ease;
+    }
+
+    .backup-choice:hover { transform: translateY(-1px); border-color: #bdcad8; }
+    .backup-choice input { position: absolute; opacity: 0; pointer-events: none; }
+    .backup-choice.selected { border-color: var(--primary-2); box-shadow: 0 0 0 4px rgba(29,74,122,.08); }
+    .backup-choice-icon { font-size: 25px; margin-bottom: 9px; }
+    .backup-choice strong { display: block; margin-bottom: 5px; }
+    .backup-choice small { color: var(--muted); line-height: 1.6; }
+
+    .backup-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .backup-stat {
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: var(--surface-2);
+    }
+
+    .backup-stat span { display: block; color: var(--muted); font-size: 11px; }
+    .backup-stat strong { display: block; margin-top: 7px; font-size: 18px; }
+
+    .backup-progress { margin-top: 16px; }
+    .backup-progress-track { height: 10px; overflow: hidden; border-radius: 999px; background: #e8edf3; }
+    .backup-progress-bar { width: 0%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--primary-2), var(--accent)); transition: width .2s ease; }
+    .backup-progress-text { margin-top: 8px; display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 11px; }
+
+    body.dark .backup-choice,
+    body.dark .backup-stat { background: #0c1825; border-color: var(--border); }
+    body.dark .backup-progress-track { background: #223347; }
+
+    /* =========================================================
        DARK MODE
     ========================================================= */
 
@@ -2115,6 +2203,12 @@
     /* =========================================================
        TABLET + MOBILE
     ========================================================= */
+
+    @media (max-width: 900px) {
+      .backup-hero { grid-template-columns: 1fr; }
+      .backup-options { grid-template-columns: 1fr; }
+      .backup-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
 
     @media (max-width: 900px) {
       html {
@@ -2872,7 +2966,7 @@
 
         <div class="nav-title">البيانات</div>
 
-        <button class="nav-btn" data-page="backup">
+        <button class="nav-btn manage-only" data-page="backup">
           <span class="nav-icon">⇩</span>
           نسخة احتياطية
         </button>
@@ -2957,6 +3051,11 @@
         </span>
         موردون
       </button>
+
+      <button class="manage-only" data-page="backup" type="button">
+        <span>📦</span>
+        باك أب
+      </button>
     </nav>
   </section>
 
@@ -2989,6 +3088,7 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>
